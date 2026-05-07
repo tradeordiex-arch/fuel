@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>FUEL — AI-Powered Nutrition Intelligence</title>
+<meta name="description" content="Scan meals, track macros, get AI-powered suggestions, and order groceries — all in one app. The smartest way to eat."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@200;300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #05060b;
+  --panel: #09090f;
+  --panel-2: #0d0e16;
+  --ink: #d8dce8;
+  --ink-2: #838aa4;
+  --ink-3: #5a6179;
+  --muted: #3c4158;
+  --dim: #2a2d3d;
+  --rule: rgba(255,255,255,.05);
+  --gold: #c9a96e;
+  --gold-dim: rgba(201,169,110,.08);
+  --gold-border: rgba(201,169,110,.20);
+  --green: #86efac;
+  --green-dim: rgba(134,239,172,.06);
+  --green-border: rgba(134,239,172,.15);
+  --red: #f87171;
+  --blue: #93c5fd;
+  --sans: 'Geist', -apple-system, sans-serif;
+  --serif: 'Instrument Serif', Georgia, serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { background: var(--bg); scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: .02em;
+  font-weight: 300;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* ── NAV ── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 16px 24px;
+  background: rgba(5,6,11,.8);
+  backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--rule);
+}
+.nav-brand {
+  font-size: 14px; font-weight: 500; letter-spacing: .42em;
+  text-transform: uppercase; color: var(--ink);
+}
+.nav-cta {
+  padding: 8px 20px;
+  background: var(--gold-dim); border: 1px solid var(--gold-border);
+  color: var(--gold); font-family: var(--sans); font-size: 10px;
+  font-weight: 500; letter-spacing: .25em; text-transform: uppercase;
+  text-decoration: none; transition: all .2s ease;
+}
+.nav-cta:hover { background: var(--gold-border); color: var(--ink); }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 80px 24px 60px;
+  position: relative;
+}
+
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, rgba(201,169,110,.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 10px; font-weight: 500; letter-spacing: .3em;
+  text-transform: uppercase; color: var(--gold);
+  padding: 6px 14px;
+  border: 1px solid var(--gold-border); background: var(--gold-dim);
+  margin-bottom: 32px;
+  opacity: 0; animation: fade-up .6s ease .2s forwards;
+}
+.hero-badge .dot {
+  width: 5px; height: 5px; background: var(--gold);
+  border-radius: 50%; animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; } 50% { opacity: .4; }
+}
+
+.hero-title {
+  font-family: var(--serif);
+  font-size: clamp(40px, 8vw, 72px);
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.1;
+  max-width: 700px;
+  margin-bottom: 20px;
+  opacity: 0; animation: fade-up .6s ease .35s forwards;
+}
+
+.hero-title em {
+  font-style: italic;
+  color: var(--gold);
+}
+
+.hero-sub {
+  font-size: clamp(14px, 2.5vw, 18px);
+  color: var(--ink-3);
+  max-width: 480px;
+  line-height: 1.6;
+  letter-spacing: .03em;
+  margin-bottom: 40px;
+  opacity: 0; animation: fade-up .6s ease .5s forwards;
+}
+
+.hero-cta-group {
+  display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+  opacity: 0; animation: fade-up .6s ease .65s forwards;
+}
+
+.btn-primary {
+  padding: 16px 36px;
+  background: var(--gold); border: none;
+  color: var(--bg); font-family: var(--sans); font-size: 12px;
+  font-weight: 600; letter-spacing: .3em; text-transform: uppercase;
+  cursor: pointer; transition: all .2s ease; text-decoration: none;
+}
+.btn-primary:hover { background: #d4b87a; transform: translateY(-1px); }
+
+.btn-secondary {
+  padding: 16px 36px;
+  background: none; border: 1px solid var(--rule);
+  color: var(--ink-2); font-family: var(--sans); font-size: 12px;
+  font-weight: 500; letter-spacing: .3em; text-transform: uppercase;
+  cursor: pointer; transition: all .2s ease; text-decoration: none;
+}
+.btn-secondary:hover { border-color: var(--ink-3); color: var(--ink); }
+
+/* ── FEATURES ── */
+.features {
+  padding: 80px 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.features-label {
+  font-size: 10px; font-weight: 500; letter-spacing: .35em;
+  text-transform: uppercase; color: var(--gold);
+  text-align: center; margin-bottom: 40px;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1px;
+}
+
+.feature-card {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  padding: 32px 28px;
+  transition: border-color .3s ease;
+}
+.feature-card:hover { border-color: var(--gold-border); }
+
+.feature-icon {
+  font-size: 28px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.feature-title {
+  font-size: 15px; font-weight: 500;
+  letter-spacing: .08em; color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.feature-desc {
+  font-size: 13px; color: var(--ink-3);
+  line-height: 1.6; letter-spacing: .02em;
+}
+
+/* ── HOW IT WORKS ── */
+.how {
+  padding: 80px 24px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.how-label {
+  font-size: 10px; font-weight: 500; letter-spacing: .35em;
+  text-transform: uppercase; color: var(--gold);
+  text-align: center; margin-bottom: 48px;
+}
+
+.how-steps {
+  display: flex; flex-direction: column; gap: 0;
+}
+
+.how-step {
+  display: flex; gap: 20px; padding: 28px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.how-num {
+  font-family: var(--serif); font-size: 32px;
+  color: var(--gold); min-width: 36px; line-height: 1.2;
+}
+
+.how-content {}
+.how-title {
+  font-family: var(--serif); font-size: 22px;
+  color: var(--ink); margin-bottom: 6px;
+}
+.how-desc {
+  font-size: 13px; color: var(--ink-3); line-height: 1.6;
+}
+
+/* ── SAVINGS ── */
+.savings {
+  padding: 80px 24px;
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.savings-label {
+  font-size: 10px; font-weight: 500; letter-spacing: .35em;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 24px;
+}
+
+.savings-title {
+  font-family: var(--serif); font-size: 36px;
+  color: var(--ink); margin-bottom: 16px;
+}
+
+.savings-sub {
+  font-size: 14px; color: var(--ink-3); line-height: 1.6;
+  margin-bottom: 36px;
+}
+
+.savings-comparison {
+  display: flex; flex-direction: column; gap: 10px;
+  margin-bottom: 20px;
+}
+
+.savings-bar-row {
+  display: flex; align-items: center; gap: 14px;
+}
+
+.savings-bar-label {
+  font-size: 9px; font-weight: 500; letter-spacing: .25em;
+  text-transform: uppercase; color: var(--ink-3);
+  min-width: 56px; text-align: right;
+}
+
+.savings-bar-track {
+  flex: 1; height: 32px; background: var(--panel);
+  border: 1px solid var(--rule); position: relative; overflow: hidden;
+}
+
+.savings-bar-fill {
+  height: 100%; display: flex; align-items: center; padding: 0 14px;
+  font-size: 13px; font-weight: 500;
+  transition: width 1.5s cubic-bezier(.16,1,.3,1); width: 0;
+}
+.savings-bar-fill.home { background: rgba(134,239,172,.08); border-right: 2px solid var(--green); color: var(--green); }
+.savings-bar-fill.delivery { background: rgba(248,113,113,.06); border-right: 2px solid var(--red); color: var(--red); }
+
+.savings-result {
+  font-family: var(--serif); font-size: 28px; color: var(--green);
+  margin-top: 16px;
+}
+.savings-result-label {
+  font-family: var(--sans); font-size: 10px; font-weight: 500;
+  letter-spacing: .3em; text-transform: uppercase;
+  color: var(--ink-3); margin-top: 4px;
+}
+
+/* ── WAITLIST ── */
+.waitlist {
+  padding: 80px 24px 100px;
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.waitlist-title {
+  font-family: var(--serif); font-size: 32px;
+  color: var(--ink); margin-bottom: 10px;
+}
+
+.waitlist-sub {
+  font-size: 13px; color: var(--ink-3); margin-bottom: 28px;
+  line-height: 1.6;
+}
+
+.waitlist-form {
+  display: flex; gap: 8px;
+}
+
+.waitlist-input {
+  flex: 1; padding: 14px 16px;
+  background: var(--panel); border: 1px solid var(--rule);
+  color: var(--ink); font-family: var(--sans); font-size: 14px;
+  font-weight: 300; outline: none; border-radius: 0;
+  -webkit-appearance: none; transition: border-color .2s ease;
+}
+.waitlist-input::placeholder { color: var(--muted); }
+.waitlist-input:focus { border-color: var(--gold-border); }
+
+.waitlist-btn {
+  padding: 14px 24px;
+  background: var(--gold); border: none;
+  color: var(--bg); font-family: var(--sans); font-size: 11px;
+  font-weight: 600; letter-spacing: .2em; text-transform: uppercase;
+  cursor: pointer; transition: all .2s ease; white-space: nowrap;
+}
+.waitlist-btn:hover { background: #d4b87a; }
+
+.waitlist-note {
+  font-size: 11px; color: var(--muted); margin-top: 12px;
+  letter-spacing: .04em;
+}
+
+/* ── FOOTER ── */
+.footer {
+  padding: 32px 24px;
+  border-top: 1px solid var(--rule);
+  text-align: center;
+}
+.footer-brand {
+  font-size: 12px; font-weight: 500; letter-spacing: .42em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+}
+.footer-copy {
+  font-size: 11px; color: var(--dim); letter-spacing: .06em;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── SCROLL REVEAL ── */
+.reveal {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity .6s ease, transform .6s cubic-bezier(.16,1,.3,1);
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 600px) {
+  .waitlist-form { flex-direction: column; }
+  .waitlist-btn { width: 100%; }
+  .hero { padding: 100px 20px 60px; }
+  .feature-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">FUEL</div>
+  <a class="nav-cta" href="#waitlist">JOIN WAITLIST</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge"><div class="dot"></div> AI-POWERED</div>
+  <h1 class="hero-title">The <em>smartest</em> way to eat</h1>
+  <p class="hero-sub">Scan any meal. Track your macros. Get personalized suggestions. Order ingredients in one tap. FUEL is nutrition intelligence for people who care what they put in their body.</p>
+  <div class="hero-cta-group">
+    <a class="btn-primary" href="#waitlist">GET EARLY ACCESS</a>
+    <a class="btn-secondary" href="#how">HOW IT WORKS</a>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features reveal">
+  <div class="features-label">WHAT FUEL DOES</div>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <span class="feature-icon">📸</span>
+      <div class="feature-title">Scan or Speak</div>
+      <div class="feature-desc">Take a photo of any meal or describe it in your own words. AI identifies it instantly — calories, protein, carbs, fat — and logs it in seconds.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🎯</span>
+      <div class="feature-title">Smart Targets</div>
+      <div class="feature-desc">Personalized daily goals calculated from your body, activity level, and whether you're cutting, maintaining, or building. Updates as you do.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🍽️</span>
+      <div class="feature-title">AI Suggestions</div>
+      <div class="feature-desc">Running low on protein? Need more greens? Tap a goal and get instant meal suggestions that fit your remaining budget. Sweet or savory, filtered live.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🛒</span>
+      <div class="feature-title">One-Tap Grocery</div>
+      <div class="feature-desc">Add any recipe to your cart. AI breaks it into ingredients, checks your pantry, and sends the list to Instacart, Amazon Fresh, or Walmart. One tap.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📊</span>
+      <div class="feature-title">Weekly Trends</div>
+      <div class="feature-desc">See your consistency at a glance. 7-day bar charts, macro averages, streak tracking, and AI-generated weekly insights that actually help.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">💬</span>
+      <div class="feature-title">Health Coach</div>
+      <div class="feature-desc">An AI coach that knows your intake, your goals, and your patterns. Ask anything — meal ideas, substitutions, or just "am I on track?"</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how reveal" id="how">
+  <div class="how-label">HOW IT WORKS</div>
+  <div class="how-steps">
+    <div class="how-step">
+      <div class="how-num">1</div>
+      <div class="how-content">
+        <div class="how-title">Scan your meal</div>
+        <div class="how-desc">Point your camera at any plate, or just say "grilled chicken with rice." AI handles the rest — identifying the food, estimating portion size, and calculating exact macros.</div>
+      </div>
+    </div>
+    <div class="how-step">
+      <div class="how-num">2</div>
+      <div class="how-content">
+        <div class="how-title">See what you need</div>
+        <div class="how-desc">Your dashboard updates in real-time. Four concentric rings show calories, protein, carbs, and fat at a glance. Goal chips tell you where to focus — tap one and get targeted suggestions.</div>
+      </div>
+    </div>
+    <div class="how-step">
+      <div class="how-num">3</div>
+      <div class="how-content">
+        <div class="how-title">Pick your next meal</div>
+        <div class="how-desc">Swipe through AI-generated suggestions tailored to your remaining goals. Every card shows the recipe, macros, and cost. Tap to see full cooking instructions and ingredient list.</div>
+      </div>
+    </div>
+    <div class="how-step">
+      <div class="how-num">4</div>
+      <div class="how-content">
+        <div class="how-title">Order ingredients</div>
+        <div class="how-desc">One tap sends your grocery list to Instacart, Amazon Fresh, or Walmart — with pantry items you already have excluded. Ingredients on your doorstep within the hour.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SAVINGS -->
+<section class="savings reveal">
+  <div class="savings-label">THE REAL NUMBERS</div>
+  <div class="savings-title">Cook smarter, save more</div>
+  <div class="savings-sub">The average FUEL user who cooks at home instead of ordering delivery saves over $140 per week on the same meals.</div>
+  <div class="savings-comparison">
+    <div class="savings-bar-row">
+      <div class="savings-bar-label">Home</div>
+      <div class="savings-bar-track">
+        <div class="savings-bar-fill home" id="savingsHome">$52</div>
+      </div>
+    </div>
+    <div class="savings-bar-row">
+      <div class="savings-bar-label">Delivery</div>
+      <div class="savings-bar-track">
+        <div class="savings-bar-fill delivery" id="savingsDelivery">~$198</div>
+      </div>
+    </div>
+  </div>
+  <div class="savings-result">$145 saved per week</div>
+  <div class="savings-result-label">AVERAGE ACROSS 12 MEALS</div>
+</section>
+
+<!-- WAITLIST -->
+<section class="waitlist reveal" id="waitlist">
+  <div class="waitlist-title">Get early access</div>
+  <div class="waitlist-sub">FUEL is in private beta. Drop your email and we'll let you in when it's ready.</div>
+  <form class="waitlist-form" onsubmit="submitWaitlist(event)">
+    <input class="waitlist-input" id="waitlistEmail" type="email" placeholder="you@email.com" required/>
+    <button class="waitlist-btn" type="submit">JOIN</button>
+  </form>
+  <div class="waitlist-note" id="waitlistNote">No spam. Just early access.</div>
+</section>
+
+<footer class="footer">
+  <div class="footer-brand">FUEL</div>
+  <div class="footer-copy">&copy; 2026 FUEL. All rights reserved.</div>
+</footer>
+
+<script>
+// Scroll reveal
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// Savings animation
+const savingsObs = new IntersectionObserver((entries) => {
+  if (entries[0].isIntersecting) {
+    setTimeout(() => document.getElementById('savingsHome').style.width = '26%', 200);
+    setTimeout(() => document.getElementById('savingsDelivery').style.width = '100%', 500);
+    savingsObs.disconnect();
+  }
+}, { threshold: 0.3 });
+savingsObs.observe(document.querySelector('.savings'));
+
+// Waitlist submit
+function submitWaitlist(e) {
+  e.preventDefault();
+  const email = document.getElementById('waitlistEmail').value;
+  // In production: send to your backend / Mailchimp / Notion / etc.
+  console.log('Waitlist signup:', email);
+  document.getElementById('waitlistEmail').value = '';
+  document.getElementById('waitlistNote').textContent = "You're on the list. We'll be in touch.";
+  document.getElementById('waitlistNote').style.color = '#86efac';
+}
+</script>
+</body>
+</html>
