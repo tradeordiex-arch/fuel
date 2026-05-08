@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@200;300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;1,400&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 :root {
   --bg:      #05060b;
@@ -97,6 +98,41 @@ body.light {
   --amber-dim: rgba(183,121,31,.06);
 }
 
+/* ═══════════════════════════════════════
+   GLOBAL GLOW INTERACTIONS
+   ═══════════════════════════════════════ */
+* { -webkit-tap-highlight-color: transparent; }
+
+button, .profile-action, .nav-item, .flavor-btn, .pantry-toggle-btn,
+.ob-option, .suggestion-card, .ing-action-btn, .auth-submit,
+.pantry-submit, .ing-add-btn, .scan-add-btn, .detail-add-btn,
+.detail-cart-btn, .pantry-empty-btn, .goal-chip {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  position: relative;
+}
+
+button:active, .profile-action:active, .nav-item:active,
+.flavor-btn:active, .pantry-toggle-btn:active, .ob-option:active,
+.auth-submit:active, .pantry-submit:active,
+.ing-add-btn:active, .scan-add-btn:active, .detail-add-btn:active,
+.detail-cart-btn:active, .pantry-empty-btn:active {
+  box-shadow: 0 0 6px rgba(201,169,110,.08);
+}
+
+.suggestion-card:active {
+  box-shadow: 0 0 8px rgba(201,169,110,.06);
+}
+
+body.light button:active, body.light .profile-action:active,
+body.light .nav-item:active, body.light .auth-submit:active {
+  box-shadow: 0 0 6px rgba(158,125,58,.06);
+}
+
+.pantry-swipe-delete:active {
+  box-shadow: 0 0 6px rgba(248,113,113,.1);
+}
+
 /* Paper texture overlay */
 body.light::before {
   content: '';
@@ -154,6 +190,12 @@ body.light .ring-cal { stroke: var(--gold); }
 body.light .ring-track-prot,
 body.light .ring-track-carbs,
 body.light .ring-track-fat { stroke: rgba(0,0,0,.04); }
+body.light .ring-container::before {
+  background: radial-gradient(circle, rgba(158,125,58,.04) 0%, rgba(45,138,82,.02) 30%, transparent 60%);
+}
+body.light .ring-wrapper {
+  -webkit-box-reflect: below -10px linear-gradient(transparent 65%, rgba(0,0,0,.0375) 87%, rgba(0,0,0,.0125));
+}
 
 /* Theme toggle */
 .theme-toggle {
@@ -222,23 +264,23 @@ body {
    CONTENT
    ═══════════════════════════════════════ */
 .content { max-width: 430px; margin: 0 auto; padding: 0 18px; }
-.section { padding: 28px 0 0; }
+.section { padding: 32px 0 0; }
 .section-label { font-size: 10px; font-weight: 500; letter-spacing: .35em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 14px; padding-left: 2px; }
 .section-divider { height: 1px; background: var(--rule); margin: 8px 0; }
 
 /* ═══════════════════════════════════════
    GREETING
    ═══════════════════════════════════════ */
-.greeting { padding: 24px 0 0; }
-.greeting-hi { font-family: var(--serif); font-style: italic; font-size: 28px; color: var(--ink); line-height: 1.2; opacity: 0; animation: fade-up .6s ease .2s forwards; }
-.greeting-sub { font-size: 12px; color: var(--ink-3); letter-spacing: .08em; margin-top: 6px; opacity: 0; animation: fade-up .6s ease .35s forwards; }
+.greeting { padding: 32px 0 0; }
+.greeting-hi { font-family: var(--serif); font-style: italic; font-size: 30px; color: var(--ink); line-height: 1.2; opacity: 0; animation: fade-up .6s ease .2s forwards; }
+.greeting-sub { font-size: 12px; color: var(--ink-3); letter-spacing: .08em; margin-top: 10px; opacity: 0; animation: fade-up .6s ease .35s forwards; }
 
 /* ═══════════════════════════════════════
    #9 — DAILY INSIGHT CARD
    ═══════════════════════════════════════ */
 .insight-card {
-  margin-top: 14px;
-  padding: 12px 16px;
+  margin-top: 18px;
+  padding: 14px 18px;
   background: var(--panel);
   border: 1px solid var(--rule);
   border-left: 2px solid var(--gold);
@@ -247,6 +289,8 @@ body {
   gap: 10px;
   opacity: 0;
   animation: fade-up .5s ease .5s forwards;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 .insight-icon {
   flex-shrink: 0;
@@ -254,26 +298,82 @@ body {
   color: var(--gold);
 }
 .insight-icon svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+.insight-body { flex: 1; min-width: 0; }
 .insight-text {
   font-family: var(--serif);
   font-style: italic;
   font-size: 13px;
   color: var(--ink-2);
   line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.insight-card.expanded .insight-text {
+  white-space: normal;
+  overflow: visible;
+}
+.insight-detail {
+  max-height: 0; overflow: hidden;
+  transition: max-height .35s ease, opacity .3s ease, margin .3s ease;
+  opacity: 0; margin-top: 0;
+  font-size: 12px; color: var(--ink-3); line-height: 1.6;
+  letter-spacing: .02em;
+}
+.insight-card.expanded .insight-detail {
+  max-height: 200px; opacity: 1; margin-top: 10px;
 }
 
 /* ═══════════════════════════════════════
    TRIPLE RING
    ═══════════════════════════════════════ */
-.ring-container { display: flex; flex-direction: column; align-items: center; padding: 24px 0 8px; }
-.ring-wrapper { position: relative; width: 220px; height: 220px; transition: transform .3s ease; }
+.ring-container {
+  display: flex; flex-direction: column; align-items: center; padding: 32px 0 12px;
+  position: relative;
+}
+/* Radial glow behind ring */
+.ring-container::before {
+  content: '';
+  position: absolute;
+  top: 20px; left: 50%;
+  width: 320px; height: 320px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(201,169,110,.075) 0%, rgba(134,239,172,.0375) 30%, rgba(147,197,253,.025) 50%, transparent 70%);
+  pointer-events: none;
+  border-radius: 50%;
+}
+.ring-wrapper {
+  position: relative; width: 260px; height: 260px;
+  transition: transform .3s ease; z-index: 1;
+  -webkit-box-reflect: below -10px linear-gradient(transparent 60%, rgba(255,255,255,.075) 82%, rgba(255,255,255,.025));
+}
+/* Fallback reflection for Firefox */
+.ring-reflection { display: none; }
+@supports not (-webkit-box-reflect: below) {
+  .ring-reflection {
+    display: block;
+    width: 220px; height: 60px;
+    margin: -8px auto 0;
+    background: linear-gradient(to bottom,
+      rgba(201,169,110,.10) 0%,
+      rgba(134,239,172,.05) 20%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,.5), transparent);
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.5), transparent);
+    border-radius: 50%;
+    filter: blur(8px);
+    pointer-events: none;
+    position: relative; z-index: 0;
+  }
+}
 .ring-wrapper.pulse { animation: ring-pulse .5s ease; }
 @keyframes ring-pulse {
   0% { transform: scale(1); }
   40% { transform: scale(1.04); }
   100% { transform: scale(1); }
 }
-.ring-svg { width: 220px; height: 220px; transform: rotate(-90deg); }
+.ring-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring-track { fill: none; stroke: var(--dim); }
 .ring-track-cal   { stroke-width: 5; }
 .ring-track-prot  { stroke-width: 3.5; stroke: rgba(255,255,255,.03); }
@@ -289,14 +389,14 @@ body {
 .ring-carbs { stroke: var(--gold); stroke-width: 3.5; opacity: .7; }
 .ring-fat   { stroke: var(--blue); stroke-width: 3.5; filter: drop-shadow(0 0 4px rgba(147,197,253,.1)); }
 .ring-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
-.ring-number { font-size: 42px; font-weight: 200; letter-spacing: -.02em; color: var(--ink); line-height: 1; }
-.ring-unit { font-size: 10px; font-weight: 400; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-3); margin-top: 5px; }
-.ring-sub { font-family: var(--serif); font-style: italic; font-size: 13px; color: var(--gold); margin-top: 3px; opacity: 0; animation: fade-up .6s ease .9s forwards; }
+.ring-number { font-size: 48px; font-weight: 200; letter-spacing: -.02em; color: var(--ink); line-height: 1; }
+.ring-unit { font-size: 10px; font-weight: 400; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-3); margin-top: 6px; }
+.ring-sub { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--gold); margin-top: 4px; opacity: 0; animation: fade-up .6s ease .9s forwards; }
 
 /* Daily score */
 .daily-score {
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 12px 0 0;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 20px 0 0;
 }
 .score-value {
   font-size: 32px; font-weight: 200; line-height: 1;
@@ -315,7 +415,7 @@ body {
   color: var(--ink-3); margin-top: 1px;
 }
 .score-breakdown {
-  display: flex; justify-content: center; gap: 12px; padding: 8px 0 0;
+  display: flex; justify-content: center; gap: 14px; padding: 10px 0 0;
 }
 .score-factor {
   display: flex; align-items: center; gap: 4px;
@@ -343,7 +443,7 @@ body {
   100% { opacity: 0; transform: scale(1.06); box-shadow: 0 0 0 transparent; }
 }
 
-.macro-legend { display: flex; justify-content: center; gap: 20px; padding: 18px 0 0; }
+.macro-legend { display: flex; justify-content: center; gap: 24px; padding: 24px 0 0; }
 .macro-legend-item { display: flex; align-items: center; gap: 6px; }
 .macro-legend-dot { width: 6px; height: 6px; border-radius: 50%; }
 .macro-legend-dot.prot { background: var(--green); }
@@ -353,7 +453,7 @@ body {
 .macro-legend-val { font-weight: 300; color: var(--ink-3); }
 
 /* ── Goal chips ── */
-.goal-strip { display: flex; gap: 16px; padding: 16px 0 0; flex-wrap: wrap; justify-content: center; }
+.goal-strip { display: flex; gap: 18px; padding: 22px 0 0; flex-wrap: wrap; justify-content: center; }
 .goal-chip { font-size: 10px; font-weight: 400; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: opacity .2s ease; }
 .goal-chip:active { opacity: .6; }
 .goal-chip.on-track { color: var(--green); }
@@ -449,7 +549,7 @@ body {
   transition: all .2s ease; position: relative; overflow: hidden;
   -webkit-tap-highlight-color: transparent;
 }
-.input-btn:active { transform: scale(.97); background: var(--surface); }
+.input-btn:active { transform: scale(.97); }
 .input-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.5; position: relative; z-index: 1; }
 .input-btn span { position: relative; z-index: 1; }
 #cameraInput { display: none; }
@@ -635,10 +735,10 @@ body {
 .log-entry {
   display: flex; align-items: flex-start; padding: 16px 14px;
   background: var(--panel); border: 1px solid var(--rule); gap: 14px;
-  cursor: pointer; transition: background .2s ease, border-color .2s ease, transform .25s ease;
+  cursor: pointer; transition: box-shadow .2s ease, transform .25s ease;
   -webkit-tap-highlight-color: transparent; position: relative;
 }
-.log-entry:active { background: var(--panel-2); border-color: var(--rule-2); }
+.log-entry:active { border-color: transparent; }
 .log-entry.slide-in { animation: slide-in .5s ease forwards; }
 .log-time-col { display: flex; flex-direction: column; align-items: center; min-width: 42px; padding-top: 2px; }
 .log-time { font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: .05em; }
@@ -775,6 +875,15 @@ body {
 }
 .flavor-btn + .flavor-btn { margin-left: 1px; }
 .flavor-btn.active { color: var(--gold); background: var(--panel-3); }
+.pantry-toggle-btn {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase;
+  font-family: var(--sans); color: var(--ink-3); background: transparent;
+  border: 1px solid var(--rule-2); padding: 6px 10px;
+  cursor: pointer; transition: all .2s; white-space: nowrap;
+}
+.pantry-toggle-btn:hover { border-color: var(--muted); color: var(--ink-2); }
+.pantry-toggle-btn.active { color: var(--green); border-color: var(--green-border); background: var(--green-dim); }
 .suggestions-track-wrapper { overflow: hidden; margin: 0 -18px; padding: 0 18px; }
 .suggestions-track {
   display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
@@ -786,16 +895,15 @@ body {
   flex: 0 0 260px; scroll-snap-align: start;
   background: var(--panel); border: 1px solid var(--rule); padding: 22px 20px;
   display: flex; flex-direction: column; gap: 8px;
-  transition: border-color .3s ease; user-select: none; -webkit-user-select: none;
+  transition: box-shadow .3s ease; user-select: none; -webkit-user-select: none;
   position: relative; min-height: 190px; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .suggestion-card::after {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold-border), transparent);
-  opacity: 0; transition: opacity .3s ease;
+  background: linear-gradient(90deg, transparent, rgba(201,169,110,.08), transparent);
+  opacity: 1;
 }
-.suggestion-card:active { border-color: var(--rule-2); background: var(--panel-2); }
-.suggestion-card:active::after { opacity: 1; }
+.suggestion-card:active { }
 .suggestion-tag { font-size: 8px; font-weight: 500; letter-spacing: .3em; text-transform: uppercase; align-self: flex-start; display: flex; align-items: center; gap: 5px; }
 .suggestion-tag .tag-dot { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
 .tag-protein { color: var(--green); }
@@ -867,6 +975,113 @@ body {
 .scan-health-note { font-family: var(--serif); font-style: italic; font-size: 13px; color: var(--ink-2); line-height: 1.5; margin-bottom: 28px; padding: 0 8px; }
 .scan-add-btn { width: 100%; height: 52px; background: var(--gold); border: none; color: var(--bg); font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; cursor: pointer; transition: all .2s ease; }
 .scan-add-btn:active { transform: scale(.97); opacity: .85; }
+
+/* ── Ingredient Editor ── */
+.ing-editor { width: 100%; max-width: 380px; margin: 0 auto; }
+.ing-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 16px; }
+.ing-row {
+  background: rgba(9,9,15,.65); border: 1px solid var(--rule); padding: 12px 14px;
+  backdrop-filter: blur(4px); position: relative; overflow: hidden;
+  transition: all .25s ease;
+}
+.ing-row.removing { opacity: 0; max-height: 0; padding: 0 14px; margin: 0; border-color: transparent; overflow: hidden; }
+.ing-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.ing-emoji { font-size: 20px; width: 28px; text-align: center; flex-shrink: 0; }
+.ing-name { font-family: var(--serif); font-size: 16px; color: var(--ink); flex: 1; line-height: 1.2; }
+.ing-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.ing-action-btn {
+  font-size: 8px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+  font-family: var(--sans); padding: 4px 8px; cursor: pointer;
+  border: 1px solid var(--rule-2); background: transparent; color: var(--ink-3);
+  transition: all .15s;
+}
+.ing-action-btn:hover { border-color: var(--muted); color: var(--ink-2); }
+.ing-action-btn.replace:hover { border-color: var(--gold-border); color: var(--gold); }
+.ing-action-btn.remove:hover { border-color: var(--red-border); color: var(--red); }
+.ing-slider-row { display: flex; align-items: center; gap: 8px; }
+.ing-slider-label { font-size: 8px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); width: 52px; text-align: right; font-family: var(--sans); font-weight: 500; transition: color .15s; }
+.ing-slider-label.active { color: var(--gold); }
+.ing-slider-track {
+  flex: 1; height: 36px; display: flex; align-items: center; position: relative;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+.ing-slider-rail {
+  position: absolute; left: 6px; right: 6px; height: 2px;
+  background: var(--dim); border-radius: 1px;
+  box-shadow: 0 0 6px rgba(201,169,110,.06);
+}
+.ing-slider-fill {
+  position: absolute; left: 6px; height: 2px;
+  background: linear-gradient(90deg, var(--gold), rgba(201,169,110,.7));
+  border-radius: 1px;
+  box-shadow: 0 0 8px rgba(201,169,110,.25), 0 0 2px rgba(201,169,110,.4);
+  transition: width .05s linear;
+}
+.ing-slider-thumb {
+  position: absolute; top: 50%; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--gold);
+  border: 2px solid rgba(255,255,255,.15);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 10px rgba(201,169,110,.4), 0 0 20px rgba(201,169,110,.15), 0 1px 3px rgba(0,0,0,.4);
+  transition: left .05s linear, box-shadow .2s;
+  z-index: 2;
+  cursor: grab;
+}
+.ing-slider-thumb:active { cursor: grabbing; box-shadow: 0 0 14px rgba(201,169,110,.6), 0 0 28px rgba(201,169,110,.25), 0 1px 3px rgba(0,0,0,.4); transform: translate(-50%, -50%) scale(1.15); }
+.ing-slider-thumb::after {
+  content: ''; position: absolute; inset: -6px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,169,110,.12) 0%, transparent 70%);
+}
+.ing-macros { display: flex; gap: 10px; margin-top: 6px; justify-content: flex-end; }
+.ing-macro { font-size: 10px; font-family: var(--mono); color: var(--ink-3); letter-spacing: .02em; transition: color .2s; }
+.ing-macro.changed { color: var(--gold); }
+
+/* Totals bar */
+.ing-totals {
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1px;
+  margin-bottom: 12px; position: sticky; bottom: 52px; z-index: 2;
+}
+.ing-total-cell {
+  background: rgba(9,9,15,.85); backdrop-filter: blur(8px);
+  border: 1px solid var(--rule); padding: 10px 6px; text-align: center;
+  transition: all .3s;
+}
+.ing-total-val { font-size: 20px; font-weight: 200; transition: all .3s; }
+.ing-total-val.gold { color: var(--gold); }
+.ing-total-val.flash { transform: scale(1.15); }
+.ing-total-label { font-size: 7px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-3); margin-top: 2px; }
+
+/* Replace suggestions dropdown */
+.ing-replace-panel {
+  padding: 8px 0; margin-top: 6px; border-top: 1px solid var(--rule);
+  animation: fade-up .2s ease;
+}
+.ing-replace-option {
+  display: flex; align-items: center; gap: 8px; padding: 8px 6px; cursor: pointer;
+  transition: background .15s;
+}
+.ing-replace-option:hover { background: var(--panel-3); }
+.ing-replace-emoji { font-size: 16px; width: 24px; text-align: center; }
+.ing-replace-name { font-size: 13px; color: var(--ink); flex: 1; }
+.ing-replace-meta { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+.ing-replace-loading { padding: 12px; text-align: center; color: var(--muted); font-size: 10px; letter-spacing: .15em; }
+.ing-add-row {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.ing-add-input {
+  flex: 1; padding: 10px 12px; font-size: 13px; font-family: var(--sans);
+  background: rgba(9,9,15,.5); border: 1px solid var(--rule); color: var(--ink);
+  outline: none; backdrop-filter: blur(4px);
+}
+.ing-add-input::placeholder { color: var(--muted); }
+.ing-add-input:focus { border-color: var(--gold); }
+.ing-add-btn {
+  padding: 10px 14px; font-size: 10px; font-weight: 600; letter-spacing: .12em;
+  text-transform: uppercase; font-family: var(--sans); background: var(--panel-3);
+  border: 1px solid var(--rule-2); color: var(--ink-2); cursor: pointer;
+}
+.ing-add-btn:hover { border-color: var(--gold-border); color: var(--gold); }
 .scan-error { color: var(--red); font-size: 12px; text-align: center; padding: 20px; }
 
 /* ═══════════════════════════════════════
@@ -889,6 +1104,10 @@ body {
 .msg { max-width: 88%; padding: 14px 16px; font-size: 13px; line-height: 1.55; letter-spacing: .01em; }
 .msg.ai { align-self: flex-start; background: var(--panel-2); border: 1px solid var(--rule); color: var(--ink); }
 .msg.ai .msg-sender { font-size: 9px; font-weight: 500; letter-spacing: .3em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; display: block; }
+.msg-body { line-height: 1.6; }
+.msg-body p { margin: 0 0 10px 0; }
+.msg-body p:last-child { margin-bottom: 0; }
+.msg-body strong { color: var(--ink); font-weight: 600; }
 .msg.user { align-self: flex-end; background: var(--gold-dim); border: 1px solid var(--gold-border); color: var(--ink); }
 .msg.typing { align-self: flex-start; background: var(--panel-2); border: 1px solid var(--rule); padding: 16px 20px; }
 .typing-dots { display: flex; gap: 4px; }
@@ -1206,7 +1425,7 @@ body {
   display: flex; align-items: center; gap: 14px;
   -webkit-tap-highlight-color: transparent;
 }
-.ob-option:active { background: var(--panel-2); }
+.ob-option:active { }
 .ob-option.selected { border-color: var(--gold-border); background: var(--gold-dim); }
 .ob-option-icon {
   width: 36px; height: 36px;
@@ -1701,6 +1920,28 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
   transition: opacity .2s ease;
 }
 .pantry-item-draggable.dragging { opacity: .3; }
+.pantry-swipe-wrap {
+  position: relative; overflow: hidden;
+  touch-action: pan-y;
+}
+.pantry-swipe-inner {
+  position: relative; transition: transform .2s ease;
+  background: var(--bg); z-index: 1;
+}
+.pantry-swipe-delete {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 80px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--red-dim); color: var(--red);
+  font-size: 9px; font-weight: 600; letter-spacing: .15em; text-transform: uppercase;
+  font-family: var(--sans); cursor: pointer;
+}
+.pantry-empty-btn {
+  font-size: 9px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase;
+  font-family: var(--sans); color: var(--red); background: transparent;
+  border: 1px solid var(--rule-2); padding: 6px 12px;
+  cursor: pointer; transition: all .2s;
+}
+.pantry-empty-btn:hover { border-color: var(--red-border); background: var(--red-dim); }
 /* Pantry score */
 .pantry-score-card {
   background: var(--panel); padding: 18px; margin-bottom: 16px;
@@ -1764,9 +2005,250 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slide-in { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+
+/* ═══════════════════════════════════════
+   AUTH OVERLAY
+   ═══════════════════════════════════════ */
+.auth-overlay {
+  position: fixed; inset: 0; z-index: 9500;
+  background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px;
+  transition: opacity .4s;
+}
+.auth-overlay.hidden { opacity: 0; pointer-events: none; }
+.auth-logo { font-family: var(--serif); font-size: 42px; font-style: italic; color: var(--ink); margin-bottom: 6px; letter-spacing: -.02em; }
+.auth-sub { font-size: 11px; color: var(--ink-3); letter-spacing: .15em; text-transform: uppercase; margin-bottom: 40px; }
+.auth-form { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; }
+.auth-input {
+  width: 100%; padding: 14px 16px; font-size: 14px; font-family: var(--sans);
+  background: var(--panel-2); border: 1px solid var(--rule-2);
+  color: var(--ink); outline: none; transition: border-color .2s;
+  box-sizing: border-box;
+}
+.auth-input::placeholder { color: var(--muted); }
+.auth-input:focus { border-color: var(--gold); }
+.auth-submit {
+  width: 100%; padding: 14px; font-size: 12px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; font-family: var(--sans);
+  background: var(--gold); color: var(--bg); border: none;
+  cursor: pointer; transition: opacity .2s; margin-top: 4px;
+}
+.auth-submit:hover { opacity: .9; }
+.auth-submit:disabled { opacity: .4; cursor: not-allowed; }
+.auth-toggle {
+  font-size: 12px; color: var(--ink-3); text-align: center; margin-top: 16px;
+  font-family: var(--sans); letter-spacing: .02em;
+}
+.auth-toggle a { color: var(--gold); cursor: pointer; text-decoration: none; }
+.auth-toggle a:hover { text-decoration: underline; }
+.auth-error {
+  font-size: 11px; color: var(--red); text-align: center;
+  font-family: var(--sans); letter-spacing: .04em;
+  min-height: 16px; margin-top: 4px;
+}
+.auth-forgot {
+  font-size: 11px; color: var(--ink-3); text-align: center;
+  font-family: var(--sans); cursor: pointer; margin-top: 4px;
+}
+.auth-forgot:hover { color: var(--gold); }
+
+/* ═══════════════════════════════════════
+   DESKTOP SIDEBAR (hidden on mobile)
+   ═══════════════════════════════════════ */
+.desktop-sidebar { display: none; }
+.desktop-layout-wrap { display: contents; }
+
+/* ═══════════════════════════════════════
+   DESKTOP LAYOUT (900px+)
+   ═══════════════════════════════════════ */
+@media (min-width: 900px) {
+  /* ── Left nav sidebar (replaces status bar + bottom nav) ── */
+  .status-bar {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 200px; z-index: 100;
+    flex-direction: column; align-items: flex-start;
+    justify-content: flex-start;
+    padding: 28px 20px;
+    background: var(--bg);
+    border-bottom: none; border-right: 1px solid var(--rule);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  .brand { font-size: 16px; margin-bottom: 40px; }
+  .status-right-group {
+    flex-direction: column; align-items: flex-start;
+    gap: 0; width: 100%; margin-top: auto;
+  }
+  .ai-badge { margin-bottom: 8px; }
+  .status-date { margin-top: 6px; }
+  .theme-toggle { position: absolute; top: 28px; right: 20px; }
+
+  .bottom-nav {
+    position: fixed; top: 0; left: 0; bottom: 0; right: auto;
+    width: 200px; z-index: 81;
+    background: transparent; border-top: none;
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    pointer-events: none;
+  }
+  .bottom-nav-inner {
+    flex-direction: column; justify-content: flex-start;
+    padding: 100px 16px 0; gap: 2px; max-width: none;
+    pointer-events: all;
+  }
+  .nav-item {
+    flex-direction: row; justify-content: flex-start;
+    padding: 10px 14px; gap: 10px; width: 100%;
+  }
+  .nav-item span { font-size: 11px; letter-spacing: .12em; }
+  .nav-item.active { background: var(--panel); }
+
+  /* ── Main layout: content + right sidebar ── */
+  body {
+    padding-bottom: 0; padding-left: 200px;
+  }
+
+  /* Wrapper to contain content + sidebar together */
+  .desktop-layout-wrap {
+    display: flex !important; gap: 40px;
+    max-width: 1060px; margin: 0 auto;
+    padding: 0 40px; width: 100%;
+  }
+
+  /* Hide mobile-only elements */
+  .input-section { display: none; }
+  .section-divider { display: none; }
+  #pantryInputRow { display: none; } /* duplicated in sidebar */
+
+  .content {
+    max-width: none; padding: 0;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .greeting { padding: 28px 0 0; }
+
+  /* ── Desktop right sidebar ── */
+  .desktop-sidebar {
+    display: flex; flex-direction: column; gap: 0;
+    width: 260px; flex-shrink: 0;
+    padding: 0 0 40px;
+    position: sticky; top: 0; align-self: flex-start;
+    max-height: 100dvh; overflow-y: auto;
+  }
+  .ds-section {
+    padding: 20px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .ds-section:first-child { padding-top: 36px; }
+  .ds-section:last-child { border-bottom: none; }
+  .ds-label {
+    font-size: 9px; font-weight: 500; letter-spacing: .35em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 12px;
+  }
+  .ds-btn {
+    width: 100%; height: 42px; margin-bottom: 6px;
+    background: var(--panel-3); border: none;
+    color: var(--gold); font-family: var(--sans); font-size: 10px; font-weight: 500;
+    letter-spacing: .25em; text-transform: uppercase; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all .2s ease;
+  }
+  .ds-btn:hover { background: var(--surface); }
+  .ds-btn:active { transform: scale(.97); }
+  .ds-btn svg { flex-shrink: 0; }
+  .ds-cook-row { display: flex; gap: 6px; }
+  .ds-cook-input {
+    flex: 1; padding: 10px 12px; font-size: 12px; font-family: var(--sans);
+    background: var(--panel); border: 1px solid var(--rule); color: var(--ink);
+    outline: none; font-weight: 300; letter-spacing: .02em;
+  }
+  .ds-cook-input::placeholder { color: var(--muted); }
+  .ds-cook-input:focus { border-color: var(--gold); }
+  .ds-cook-btn {
+    padding: 10px 14px; font-size: 10px; font-weight: 600; letter-spacing: .2em;
+    font-family: var(--sans); background: var(--gold); border: none;
+    color: var(--bg); cursor: pointer; white-space: nowrap;
+    transition: opacity .2s;
+  }
+  .ds-cook-btn:hover { opacity: .9; }
+
+  /* ── Desktop weekly widget ── */
+  .ds-weekly { padding-top: 20px; }
+  .ds-week-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .ds-week-title {
+    font-size: 9px; font-weight: 500; letter-spacing: .35em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .ds-week-avg {
+    font-size: 10px; color: var(--gold); letter-spacing: .04em;
+  }
+  .ds-week-bars {
+    display: flex; align-items: flex-end; gap: 6px;
+    height: 60px; margin-bottom: 6px;
+  }
+  .ds-week-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .ds-week-bar {
+    width: 100%; background: var(--gold-dim); border: 1px solid rgba(201,169,110,.15);
+    min-height: 2px; transition: height .6s cubic-bezier(.16,1,.3,1);
+  }
+  .ds-week-bar.today { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 6px var(--gold-glow); }
+  .ds-week-bar.over { border-color: rgba(248,113,113,.2); background: var(--red-dim); }
+  .ds-week-day {
+    font-size: 9px; font-weight: 500; letter-spacing: .1em; color: var(--muted);
+    text-transform: uppercase;
+  }
+  .ds-week-day.today { color: var(--gold); }
+  .ds-week-stats {
+    display: flex; gap: 16px; padding-top: 14px;
+    border-top: 1px solid var(--rule); margin-top: 10px;
+  }
+  .ds-week-stat { flex: 1; }
+  .ds-week-stat-val { font-size: 14px; font-weight: 300; color: var(--ink); }
+  .ds-week-stat-label {
+    font-size: 8px; font-weight: 500; letter-spacing: .15em;
+    text-transform: uppercase; color: var(--muted); margin-top: 2px;
+  }
+
+  /* ── Overlays offset for sidebar ── */
+  .coach-collapsed { left: 200px; }
+  .coach-overlay, .weekly-overlay, .profile-overlay,
+  .search-overlay, .cart-overlay { left: 200px; }
+  .coach-messages, .weekly-body, .profile-body,
+  .search-body, .cart-panel-body { max-width: 700px; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--dim); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .toast { left: calc(200px + 50%); transform: translateX(-50%); }
+}
+
+@media (min-width: 1200px) {
+  .desktop-layout-wrap { max-width: 1120px; gap: 50px; padding: 0 50px; }
+  .desktop-sidebar { width: 280px; }
+}
 </style>
 </head>
 <body>
+
+<!-- ═══ AUTH ═══ -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-logo">Fuel</div>
+  <div class="auth-sub">Track smarter, eat better</div>
+  <div class="auth-form" id="authForm">
+    <input class="auth-input" id="authEmail" type="email" placeholder="Email" autocomplete="email" />
+    <input class="auth-input" id="authPassword" type="password" placeholder="Password" autocomplete="current-password" />
+    <button class="auth-submit" id="authSubmit" onclick="handleAuth()">Sign In</button>
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-toggle" id="authToggle">No account? <a onclick="toggleAuthMode()">Create one</a></div>
+    <div class="auth-forgot" id="authForgot" onclick="handleForgot()">Forgot password?</div>
+  </div>
+</div>
 
 <!-- ═══ ONBOARDING ═══ -->
 <div class="onboarding" id="onboarding" style="display:none;">
@@ -1937,15 +2419,19 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
   </div>
 </header>
 
+<div class="desktop-layout-wrap">
 <main class="content">
 
   <!-- GREETING + INSIGHT -->
   <div class="greeting" onclick="openWeekly()" style="cursor:pointer;-webkit-tap-highlight-color:transparent;">
     <div class="greeting-hi" id="greetingText"></div>
     <div class="greeting-sub" id="greetingSub"></div>
-    <div class="insight-card" id="insightCard" style="display:none;">
+    <div class="insight-card" id="insightCard" style="display:none;" onclick="event.stopPropagation();toggleInsight()">
       <div class="insight-icon"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7z"/><line x1="9" y1="21" x2="15" y2="21"/></svg></div>
-      <div class="insight-text" id="insightText"></div>
+      <div class="insight-body">
+        <div class="insight-text" id="insightText"></div>
+        <div class="insight-detail" id="insightDetail"></div>
+      </div>
     </div>
   </div>
 
@@ -1980,6 +2466,7 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
           <div class="ring-sub" id="ringStatus">on track</div>
         </div>
       </div>
+      <div class="ring-reflection"></div>
       <div class="macro-legend">
         <div class="macro-legend-item"><div class="macro-legend-dot prot"></div><div class="macro-legend-text" id="legendProt">0<span class="macro-legend-val"> / 140g P</span></div></div>
         <div class="macro-legend-item"><div class="macro-legend-dot carbs"></div><div class="macro-legend-text" id="legendCarbs">0<span class="macro-legend-val"> / 230g C</span></div></div>
@@ -2056,11 +2543,16 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
   <section class="section" style="padding-bottom: 100px;" id="suggestionsSection">
     <div class="suggestions-header">
       <div class="section-label" style="margin-bottom:0" id="suggestionsLabel">Suggestions</div>
-      <div class="flavor-toggle">
-        <button class="flavor-btn active" data-flavor="all">All</button>
-        <button class="flavor-btn" data-flavor="savory">Savory</button>
-        <button class="flavor-btn" data-flavor="sweet">Sweet</button>
-        <button class="flavor-btn" data-flavor="pantry">Pantry</button>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="flavor-toggle">
+          <button class="flavor-btn active" data-flavor="all">All</button>
+          <button class="flavor-btn" data-flavor="savory">Savory</button>
+          <button class="flavor-btn" data-flavor="sweet">Sweet</button>
+        </div>
+        <button class="pantry-toggle-btn" id="pantryToggleBtn" title="Use pantry ingredients">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/></svg>
+          Pantry
+        </button>
       </div>
     </div>
     <div class="suggestions-track-wrapper">
@@ -2072,6 +2564,30 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
   </section>
 
 </main>
+
+<!-- DESKTOP RIGHT SIDEBAR (visible 900px+) -->
+<aside class="desktop-sidebar" id="desktopSidebar">
+  <div class="ds-section">
+    <div class="ds-label">QUICK LOG</div>
+    <button class="ds-btn" onclick="document.getElementById('scanBtn').click()">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      SCAN PHOTO
+    </button>
+    <button class="ds-btn" onclick="document.getElementById('speakBtn').click()">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      DESCRIBE
+    </button>
+  </div>
+  <div class="ds-section">
+    <div class="ds-label">COOK FROM PANTRY</div>
+    <div class="ds-cook-row">
+      <input class="ds-cook-input" type="text" placeholder="I have chicken, rice, broccoli..." onkeydown="if(event.key==='Enter'){document.getElementById('pantryInput').value=this.value;document.getElementById('pantrySubmit').click();this.value='';}" />
+      <button class="ds-cook-btn" onclick="document.getElementById('pantryInput').value=this.previousElementSibling.value;document.getElementById('pantrySubmit').click();this.previousElementSibling.value='';">COOK</button>
+    </div>
+  </div>
+  <div class="ds-section ds-weekly" id="desktopWeekly"></div>
+</aside>
+</div><!-- /desktop-layout-wrap -->
 
 <!-- COACH collapsed -->
 <!-- Coach moved to bottom nav -->
@@ -2158,6 +2674,15 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
   <div class="weekly-body" id="pantryPageBody" style="padding:12px 20px;"></div>
 </div>
 
+<!-- SHARE PANTRY DIALOG -->
+<div class="search-overlay" id="shareDialog" style="z-index:1001;">
+  <div class="weekly-header">
+    <div class="weekly-title" id="shareDialogTitle">SHARE PANTRY</div>
+    <button class="weekly-close" onclick="closeShareDialog()">&times;</button>
+  </div>
+  <div class="weekly-body" id="shareDialogBody" style="padding:20px;"></div>
+</div>
+
 <!-- SEARCH (accessible from pantry) -->
 <div class="search-overlay" id="searchOverlay">
   <div class="search-bar-area">
@@ -2191,14 +2716,264 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav"><div class="bottom-nav-inner">
   <button class="nav-item active" onclick="closeAllPanels()"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></button>
-  <button class="nav-item" onclick="openPantryPage()"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/></svg><span>Pantry</span></button>
+  <button class="nav-item" onclick="openPantryPage()"><div style="position:relative;"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/></svg><span class="invite-badge" id="inviteBadge" style="display:none;position:absolute;top:-2px;right:-4px;width:8px;height:8px;background:var(--gold);border-radius:50%;"></span></div><span>Pantry</span></button>
   <button class="nav-item" onclick="openCoach()"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Coach</span></button>
   <button class="nav-item" id="cartNavBtn" onclick="openCartPanel()"><svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg><span>Cart</span></button>
   <button class="nav-item" onclick="openProfile()"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Profile</span></button>
 </div></nav>
 
 <script>
-let GOALS = { calories: 2100, protein: 140, carbs: 230, fat: 65 };
+// ═══════════════════════════════════════
+// SUPABASE AUTH + SYNC
+// ═══════════════════════════════════════
+const SUPABASE_URL = 'https://shcemayremkowwmzuxgd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNoY2VtYXlyZW1rb3d3bXp1eGdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxOTYwODcsImV4cCI6MjA5Mzc3MjA4N30.iRHufBfaSz9skvzyENdOpmWYR_dxPhApJ0mdHg2nUU8';
+const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+let currentUser = null;
+let authMode = 'signin'; // 'signin' or 'signup'
+
+function toggleAuthMode() {
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  document.getElementById('authSubmit').textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+  document.getElementById('authToggle').innerHTML = authMode === 'signin'
+    ? 'No account? <a onclick="toggleAuthMode()">Create one</a>'
+    : 'Have an account? <a onclick="toggleAuthMode()">Sign in</a>';
+  document.getElementById('authForgot').style.display = authMode === 'signin' ? 'block' : 'none';
+  document.getElementById('authError').textContent = '';
+}
+
+async function handleAuth() {
+  if (!sb) return;
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  const btn = document.getElementById('authSubmit');
+  errEl.textContent = '';
+  if (!email || !pass) { errEl.textContent = 'Email and password required'; return; }
+  if (pass.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; return; }
+  btn.disabled = true;
+  btn.textContent = authMode === 'signin' ? 'Signing in...' : 'Creating account...';
+
+  try {
+    let result;
+    if (authMode === 'signup') {
+      result = await sb.auth.signUp({ email, password: pass });
+    } else {
+      result = await sb.auth.signInWithPassword({ email, password: pass });
+    }
+    if (result.error) throw result.error;
+    currentUser = result.data.user;
+    if (authMode === 'signup' && result.data.user && !result.data.session) {
+      errEl.style.color = 'var(--green)';
+      errEl.textContent = 'Check your email to confirm your account';
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+      return;
+    }
+    await ensureUserProfile();
+    await resolveSharedPantryOwner();
+    await pullFromCloud();
+    document.getElementById('authOverlay').classList.add('hidden');
+    setTimeout(() => { document.getElementById('authOverlay').style.display = 'none'; }, 400);
+    bootApp();
+    refreshShareStatus();
+    subscribeToPantryChanges();
+    subscribeToInvites();
+  } catch (e) {
+    errEl.textContent = e.message || 'Authentication failed';
+  }
+  btn.disabled = false;
+  btn.textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+}
+
+async function handleForgot() {
+  if (!sb) return;
+  const email = document.getElementById('authEmail').value.trim();
+  const errEl = document.getElementById('authError');
+  if (!email) { errEl.textContent = 'Enter your email first'; return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email);
+  if (error) { errEl.textContent = error.message; return; }
+  errEl.style.color = 'var(--green)';
+  errEl.textContent = 'Password reset email sent';
+}
+
+async function handleSignOut() {
+  if (sb) await sb.auth.signOut();
+  currentUser = null;
+  const overlay = document.getElementById('authOverlay');
+  overlay.style.display = 'flex';
+  overlay.classList.remove('hidden');
+  document.getElementById('authError').textContent = '';
+  document.getElementById('authError').style.color = '';
+  document.getElementById('profileOverlay').classList.remove('open');
+}
+
+// ── Cloud Sync ──
+let syncTimer = null;
+function schedulePush() {
+  if (!currentUser || !sb) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(pushToCloud, 2000);
+}
+
+async function pushToCloud() {
+  if (!currentUser || !sb) return;
+  const uid = currentUser.id;
+  try {
+    // Profile
+    const prof = JSON.parse(localStorage.getItem('fuel_profile') || 'null');
+    if (prof) {
+      await sb.from('profiles').upsert({
+        id: uid,
+        name: prof.name || null,
+        age: prof.age || null,
+        sex: prof.sex || null,
+        height_in: prof.heightIn || null,
+        weight: prof.weight || null,
+        activity_mult: prof.activityMult || null,
+        goal: prof.goal || 'maintain',
+        diets: prof.diets || [],
+        targets: prof.targets || {},
+      });
+    }
+
+    // Today's log
+    const key = todayKey();
+    const days = loadAllDays();
+    if (days[key]) {
+      const d = days[key];
+      await sb.from('daily_logs').upsert({
+        user_id: uid,
+        log_date: key,
+        meals: d.meals || [],
+        water: d.water || 0,
+        score: d.score || null,
+        score_factors: d.scoreFactors || null,
+      }, { onConflict: 'user_id,log_date' });
+    }
+
+    // Pantry (use effective owner for shared pantries)
+    const pantryUserId = getEffectivePantryUserId() || uid;
+    const pantry = getPantry();
+    if (pantry && Object.keys(pantry).length > 0) {
+      await sb.from('pantry').upsert({
+        user_id: pantryUserId,
+        items: pantry,
+      }, { onConflict: 'user_id' });
+    }
+  } catch (e) { console.warn('[FUEL sync] push failed:', e); }
+}
+
+async function pullFromCloud() {
+  if (!currentUser || !sb) return;
+  const uid = currentUser.id;
+  try {
+    // Profile
+    const { data: prof } = await sb.from('profiles').select('*').eq('id', uid).single();
+    if (prof && prof.name) {
+      const localProf = {
+        name: prof.name,
+        age: prof.age,
+        sex: prof.sex,
+        heightIn: prof.height_in,
+        weight: Number(prof.weight),
+        activityMult: Number(prof.activity_mult),
+        goal: prof.goal,
+        diets: prof.diets || [],
+        targets: prof.targets || {},
+        createdAt: prof.created_at,
+      };
+      localStorage.setItem('fuel_profile', JSON.stringify(localProf));
+    }
+
+    // Daily logs
+    const { data: logs } = await sb.from('daily_logs').select('*').eq('user_id', uid);
+    if (logs && logs.length > 0) {
+      const localDays = loadAllDays();
+      for (const row of logs) {
+        const local = localDays[row.log_date];
+        const cloudMeals = row.meals || [];
+        if (!local || cloudMeals.length >= (local.meals?.length || 0)) {
+          localDays[row.log_date] = {
+            meals: cloudMeals,
+            water: row.water || 0,
+            score: row.score || null,
+            scoreFactors: row.score_factors || null,
+          };
+        }
+      }
+      localStorage.setItem('fuel_days', JSON.stringify(localDays));
+    }
+
+    // Pantry (use effective owner for shared pantries)
+    const pantryPullId = getEffectivePantryUserId() || uid;
+    const { data: pantryRow } = await sb.from('pantry').select('items').eq('user_id', pantryPullId).maybeSingle();
+    if (pantryRow?.items) {
+      localStorage.setItem(getPantryKey(), JSON.stringify(pantryRow.items));
+    }
+  } catch (e) { console.warn('[FUEL sync] pull failed:', e); }
+}
+
+// Shared pantry state (declared early to avoid TDZ in getPantryKey chain)
+let _sharedPantryOwnerId = null;
+let _sharedPantryResolved = false;
+let _cachedShareStatus = { shared: false, members: [], pendingInvites: [] };
+let pantrySubscription = null;
+let inviteSubscription = null;
+
+function bootApp() {
+  // Reload today from localStorage (may have been updated by pullFromCloud)
+  try {
+    const today = loadDay(todayKey());
+    state.meals = today.meals || [];
+    state.water = today.water || 0;
+  } catch(e){}
+
+  // Fix pantry names retroactively (title-case)
+  fixPantryNames();
+
+  const profile = loadProfile();
+  if (shouldShowOnboarding()) {
+    startOnboarding();
+  } else {
+    renderDashboard();
+  }
+  renderLog();
+  loadSuggestions();
+  updateCartBadge();
+  backfillScores();
+  renderDesktopWeekly();
+}
+
+async function initAuth() {
+  if (!sb) { bootApp(); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    document.getElementById('authOverlay').style.display = 'none';
+    await ensureUserProfile();
+    await resolveSharedPantryOwner();
+    await pullFromCloud();
+    bootApp();
+    refreshShareStatus();
+    subscribeToPantryChanges();
+    subscribeToInvites();
+  }
+  // else: auth overlay stays visible
+
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      currentUser = null;
+    }
+  });
+}
+
+window.addEventListener('online', () => { if (currentUser) pushToCloud(); });
+
+// Allow Enter key to submit auth form
+document.getElementById('authPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleAuth(); });
+
+let GOALS = { calories: 2100, protein: 140, carbs: 230, fat: 65, fiber: 28 };
 let WATER_GOAL = 8;
 const RING = {
   cal:   { id: 'arcCal',   circ: 2*Math.PI*98 },
@@ -2249,14 +3024,17 @@ function saveState() {
   saveDay(key, { meals: state.meals, water: state.water, score: scoreData ? scoreData.score : null, scoreFactors: scoreData ? scoreData.factors : null });
   localStorage.setItem('fuel_cart', JSON.stringify(state.cart));
   localStorage.setItem('fuel_chat', JSON.stringify(state.chatHistory));
+  schedulePush();
+  // Check if a significant meal was just added
+  try { checkBriefingAfterMeal(); } catch(e) {}
 }
 
 function getTotals() {
-  return state.meals.reduce((a,m) => ({ calories:a.calories+(m.calories||0), protein:a.protein+(m.protein||0), carbs:a.carbs+(m.carbs||0), fat:a.fat+(m.fat||0) }), {calories:0,protein:0,carbs:0,fat:0});
+  return state.meals.reduce((a,m) => ({ calories:a.calories+(m.calories||0), protein:a.protein+(m.protein||0), carbs:a.carbs+(m.carbs||0), fat:a.fat+(m.fat||0), fiber:a.fiber+(m.fiber||0) }), {calories:0,protein:0,carbs:0,fat:0,fiber:0});
 }
 function getRemaining() {
   const t=getTotals();
-  return { calories:Math.max(0,GOALS.calories-t.calories), protein:Math.max(0,GOALS.protein-t.protein), carbs:Math.max(0,GOALS.carbs-t.carbs), fat:Math.max(0,GOALS.fat-t.fat) };
+  return { calories:Math.max(0,GOALS.calories-t.calories), protein:Math.max(0,GOALS.protein-t.protein), carbs:Math.max(0,GOALS.carbs-t.carbs), fat:Math.max(0,GOALS.fat-t.fat), fiber:Math.max(0,GOALS.fiber-t.fiber) };
 }
 
 // ── Date ──
@@ -2300,47 +3078,236 @@ function renderGreeting() {
 }
 
 // ═══════════════════════════════════════
-// #9 — DAILY INSIGHT
+// #9 — DAILY BRIEFING (hybrid: local instant + AI background)
 // ═══════════════════════════════════════
+function toggleInsight() {
+  document.getElementById('insightCard').classList.toggle('expanded');
+}
+
+// Schedule boundaries (hours ET-ish, using local time)
+const BRIEFING_SCHEDULE = [6, 12, 17]; // morning, noon, evening
+let _lastBriefingMealCount = 0;
+let _briefingRefreshInFlight = false;
+
+function getBriefingCacheKey() { return 'fuel_briefing_' + todayKey(); }
+
+function getCachedBriefing() {
+  try { return JSON.parse(localStorage.getItem(getBriefingCacheKey()) || 'null'); } catch(e) { return null; }
+}
+
+function cacheBriefing(headline, detail, source) {
+  localStorage.setItem(getBriefingCacheKey(), JSON.stringify({
+    headline, detail, source, ts: Date.now(), hour: new Date().getHours(), mealCount: state.meals.length
+  }));
+}
+
+function briefingIsStale() {
+  const cached = getCachedBriefing();
+  if (!cached) return true;
+  const now = new Date();
+  const h = now.getHours();
+  // Stale if we crossed a schedule boundary since last refresh
+  for (const boundary of BRIEFING_SCHEDULE) {
+    if (h >= boundary && cached.hour < boundary) return true;
+  }
+  // Stale if older than 4 hours
+  if (Date.now() - cached.ts > 4 * 60 * 60 * 1000) return true;
+  return false;
+}
+
+function buildBriefingSnapshot() {
+  const days = loadAllDays();
+  const today = new Date();
+  const todayTotals = getTotals();
+  const h = today.getHours();
+
+  // Yesterday
+  const yKey = (() => { const d = new Date(today); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
+  const yd = days[yKey] || { meals: [], water: 0 };
+  const yCal = (yd.meals||[]).reduce((s,m) => s+(m.calories||0), 0);
+  const yProt = (yd.meals||[]).reduce((s,m) => s+(m.protein||0), 0);
+  const yMealNames = (yd.meals||[]).map(m => m.name).slice(0, 5);
+
+  // Week (last 7 days)
+  const weekSummary = [];
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    const k = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const dd = days[k];
+    if (dd && dd.meals && dd.meals.length > 0) {
+      weekSummary.push({
+        cal: dd.meals.reduce((s,m) => s+(m.calories||0), 0),
+        prot: dd.meals.reduce((s,m) => s+(m.protein||0), 0),
+        carbs: dd.meals.reduce((s,m) => s+(m.carbs||0), 0),
+        fat: dd.meals.reduce((s,m) => s+(m.fat||0), 0),
+        water: dd.water || 0, score: dd.score || null, meals: dd.meals.length
+      });
+    }
+  }
+
+  return {
+    time_of_day: h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening',
+    hour: h,
+    name: getProfileName(),
+    goals: GOALS,
+    water_goal: WATER_GOAL,
+    streak: getStreak(),
+    today: {
+      meals_logged: state.meals.length,
+      meal_names: state.meals.map(m => m.name).slice(0, 5),
+      cal: todayTotals.calories, prot: todayTotals.protein,
+      carbs: todayTotals.carbs, fat: todayTotals.fat,
+      water: state.water
+    },
+    yesterday: {
+      cal: yCal, prot: yProt, water: yd.water || 0,
+      score: yd.score || null, meals: (yd.meals||[]).length, meal_names: yMealNames
+    },
+    week_avg: weekSummary.length >= 2 ? {
+      cal: Math.round(weekSummary.reduce((s,d)=>s+d.cal,0)/weekSummary.length),
+      prot: Math.round(weekSummary.reduce((s,d)=>s+d.prot,0)/weekSummary.length),
+      water: Math.round(weekSummary.reduce((s,d)=>s+d.water,0)/weekSummary.length),
+      days: weekSummary.length,
+    } : null,
+  };
+}
+
+// Local fallback briefing (same logic as before, always available)
+function buildLocalBriefing() {
+  const snap = buildBriefingSnapshot();
+  const y = snap.yesterday;
+  const w = snap.week_avg;
+  const t = snap.today;
+  let headline = '', detail = '';
+
+  if (y.meals === 0 && !w) return null;
+
+  if (y.meals > 0) {
+    const protGap = snap.goals.protein - y.prot;
+    const calDiff = y.cal - snap.goals.calories;
+
+    // Check if today already closed a gap
+    if (protGap > snap.goals.protein * 0.2 && t.prot > protGap * 0.5 && t.meals_logged > 0) {
+      headline = `Protein was light yesterday but you're making up for it — ${t.prot}g so far today.`;
+      detail = `Keep this pace and you'll clear your ${snap.goals.protein}g target.`;
+    } else if (protGap > snap.goals.protein * 0.2) {
+      headline = `Protein was ${y.prot}g yesterday — aim to front-load it today.`;
+      detail = `Eggs or Greek yogurt at breakfast gets you ahead early.`;
+    } else if (calDiff > snap.goals.calories * 0.12) {
+      headline = `Yesterday ran ${calDiff} cal over — keep today a little lighter to balance.`;
+      detail = `A high-protein, lower-carb lunch can offset without feeling restrictive.`;
+    } else if (calDiff < -snap.goals.calories * 0.25) {
+      headline = `Only ${y.cal.toLocaleString()} cal yesterday — don't shortchange yourself again.`;
+      detail = `Add a snack or bump your portions today.`;
+    } else if (y.score && y.score >= 85) {
+      headline = `Yesterday was dialed in — score ${y.score}. Keep that momentum.`;
+      detail = `${y.cal.toLocaleString()} cal, ${y.prot}g protein. Consistency compounds.`;
+    } else {
+      headline = `Solid day yesterday — ${y.cal.toLocaleString()} cal, ${y.prot}g protein.`;
+      detail = w ? `Week avg: ${w.cal.toLocaleString()} cal, ${w.prot}g protein.` : '';
+    }
+  } else if (w) {
+    const protGap = snap.goals.protein - w.prot;
+    if (protGap > 15) {
+      headline = `Protein averaging ${w.prot}g this week — ${protGap}g below target.`;
+      detail = `A protein shake or handful of nuts each day closes the gap.`;
+    } else {
+      headline = `Averaging ${w.cal.toLocaleString()} cal and ${w.prot}g protein this week.`;
+    }
+  }
+
+  return headline ? { headline, detail } : null;
+}
+
+async function refreshAIBriefing() {
+  if (_briefingRefreshInFlight) return;
+  _briefingRefreshInFlight = true;
+  try {
+    const snapshot = buildBriefingSnapshot();
+    if (snapshot.yesterday.meals === 0 && !snapshot.week_avg && snapshot.today.meals_logged === 0) return;
+
+    const resp = await fetch('/api/briefing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ snapshot }),
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.headline) {
+      cacheBriefing(data.headline, data.detail || '', 'ai');
+      // Fade-swap if card is visible
+      const card = document.getElementById('insightCard');
+      const text = document.getElementById('insightText');
+      const detail = document.getElementById('insightDetail');
+      if (card.style.display !== 'none') {
+        card.style.transition = 'opacity .3s ease';
+        card.style.opacity = '0';
+        setTimeout(() => {
+          text.textContent = data.headline;
+          detail.textContent = data.detail || '';
+          card.style.opacity = '1';
+        }, 300);
+      }
+    }
+  } catch(e) { /* local fallback handles it */ }
+  finally { _briefingRefreshInFlight = false; }
+}
+
 function renderInsight() {
   const card = document.getElementById('insightCard');
   const text = document.getElementById('insightText');
-  const n = state.meals.length;
-  const totals = getTotals();
-  const remaining = getRemaining();
+  const detail = document.getElementById('insightDetail');
+  card.classList.remove('expanded');
 
-  // Check for expiring items first
+  // Check expiring items first
   const expiring = getExpiringItems(2);
-  if (expiring.length > 0 && n === 0) {
+  if (expiring.length > 0 && state.meals.length === 0) {
     const names = expiring.map(i => i.name).slice(0, 3).join(', ');
     text.textContent = `${expiring.length === 1 ? expiring[0].name + ' expires' : names + ' expire'} soon — use ${expiring.length === 1 ? 'it' : 'them'} today.`;
+    detail.textContent = '';
     card.style.display = 'flex';
     card.style.borderLeftColor = 'var(--amber)';
     return;
   }
   card.style.borderLeftColor = '';
 
-  if (n === 0) { card.style.display = 'none'; return; }
-
-  const protPct = Math.round((totals.protein / GOALS.protein) * 100);
-  const calPct = Math.round((totals.calories / GOALS.calories) * 100);
-  const avgCal = Math.round(totals.calories / n);
-
-  let msg = '';
-  if (protPct > 70 && n <= 2) {
-    msg = `${totals.protein}g protein across ${n} meal${n>1?'s':''} — strong pace. You're at ${protPct}% of your daily target.`;
-  } else if (protPct < 30 && n >= 2) {
-    msg = `Only ${totals.protein}g protein so far across ${n} meals. Consider a protein-forward option next.`;
-  } else if (calPct > 80) {
-    msg = `You've used ${calPct}% of your calorie budget. ${remaining.calories} cal left — keep it light.`;
-  } else if (n >= 3) {
-    msg = `${n} meals logged, averaging ${avgCal} cal each. ${remaining.calories} cal remaining.`;
+  // Show cached AI briefing if fresh, otherwise local
+  const cached = getCachedBriefing();
+  if (cached && !briefingIsStale()) {
+    text.textContent = cached.headline;
+    detail.textContent = cached.detail || '';
+    card.style.display = 'flex';
   } else {
-    msg = `${totals.protein}g protein across ${n} meal${n>1?'s':''} — ${protPct}% of your daily target.`;
+    // Local instant fallback
+    const local = buildLocalBriefing();
+    if (local) {
+      text.textContent = local.headline;
+      detail.textContent = local.detail || '';
+      card.style.display = 'flex';
+      cacheBriefing(local.headline, local.detail, 'local');
+    } else {
+      card.style.display = 'none';
+    }
+    // Fire AI refresh in background
+    refreshAIBriefing();
   }
 
-  text.textContent = msg;
-  card.style.display = 'flex';
+  _lastBriefingMealCount = state.meals.length;
+}
+
+// Trigger AI refresh after significant meal (15%+ of any macro goal)
+function checkBriefingAfterMeal() {
+  if (state.meals.length <= _lastBriefingMealCount) return;
+  const latest = state.meals[state.meals.length - 1];
+  if (!latest) return;
+  const significant = (latest.protein || 0) > GOALS.protein * 0.15
+    || (latest.calories || 0) > GOALS.calories * 0.15
+    || (latest.carbs || 0) > GOALS.carbs * 0.15;
+  if (significant || state.meals.length === 1) {
+    // Debounce — wait 3s after meal add for data to settle
+    setTimeout(() => refreshAIBriefing(), 3000);
+  }
+  _lastBriefingMealCount = state.meals.length;
 }
 
 // ═══════════════════════════════════════
@@ -2381,13 +3348,15 @@ function renderDashboard() {
   document.getElementById('legendFat').innerHTML   = `${totals.fat}<span class="macro-legend-val"> / ${GOALS.fat}g F</span>`;
 
   // Goal chips (tappable — scroll + filter suggestions)
+  const fiberPct = GOALS.fiber > 0 ? totals.fiber / GOALS.fiber : 0;
   const ps = protPct>.5?'on-track':protPct>.25?'warning':'';
   const ws = state.water >= WATER_GOAL ? 'on-track' : state.water >= 4 ? 'warning' : '';
+  const fs = fiberPct>.5?'on-track':fiberPct>.25?'warning':'';
   document.getElementById('goalStrip').innerHTML = `
-    <div class="goal-chip ${ps}" onclick="focusGoal('protein')"><span class="chip-dot"></span> Protein</div>
+    <div class="goal-chip ${ps}" onclick="focusGoal('protein')"><span class="chip-dot"></span> Protein ${totals.protein}/${GOALS.protein}g</div>
+    <div class="goal-chip ${fs}" onclick="focusGoal('fiber')"><span class="chip-dot"></span> Fiber ${totals.fiber}/${GOALS.fiber}g</div>
     <div class="goal-chip ${ws}" onclick="focusGoal('hydration')"><span class="chip-dot"></span> Hydration</div>
     <div class="goal-chip warning" onclick="focusGoal('greens')"><span class="chip-dot"></span> Greens</div>
-    <div class="goal-chip" onclick="focusGoal('fiber')"><span class="chip-dot"></span> Fiber</div>
   `;
 
   renderGreeting();
@@ -2454,15 +3423,20 @@ function calculateScore() {
   score += consScore;
   factors.logging = consScore;
 
-  // ── Balance (10 pts) — carbs and fat within range ──
+  // ── Fiber (5 pts) — 80%+ = full, linear below ──
+  const fiberRatio = GOALS.fiber > 0 ? Math.min(totals.fiber / GOALS.fiber, 1.2) : 1;
+  let fiberScore = fiberRatio >= 0.8 ? 5 : Math.round(5 * (fiberRatio / 0.8));
+  fiberScore = Math.max(0, Math.min(5, fiberScore));
+  score += fiberScore;
+  factors.fiber = fiberScore;
+
+  // ── Balance (5 pts) — carbs and fat within range ──
   const carbRatio = GOALS.carbs > 0 ? totals.carbs / GOALS.carbs : 1;
   const fatRatio = GOALS.fat > 0 ? totals.fat / GOALS.fat : 1;
-  let balScore = 10;
-  // Penalty for being >30% off on carbs or fat
-  if (carbRatio > 1.3 || carbRatio < 0.5) balScore -= 3;
-  if (fatRatio > 1.3 || fatRatio < 0.5) balScore -= 3;
-  // Penalty for extremely unbalanced
-  if (carbRatio > 1.6 || fatRatio > 1.6) balScore -= 4;
+  let balScore = 5;
+  if (carbRatio > 1.3 || carbRatio < 0.5) balScore -= 2;
+  if (fatRatio > 1.3 || fatRatio < 0.5) balScore -= 2;
+  if (carbRatio > 1.6 || fatRatio > 1.6) balScore -= 1;
   balScore = Math.max(0, balScore);
   score += balScore;
   factors.balance = balScore;
@@ -2498,8 +3472,8 @@ function renderScore() {
 
   // Breakdown dots
   const breakdown = document.getElementById('scoreBreakdown');
-  const maxes = { calories: 40, protein: 25, water: 15, logging: 10, balance: 10 };
-  const labels = { calories: 'Cal', protein: 'Pro', water: 'H₂O', logging: 'Log', balance: 'Bal' };
+  const maxes = { calories: 40, protein: 25, water: 15, logging: 10, fiber: 5, balance: 5 };
+  const labels = { calories: 'Cal', protein: 'Pro', water: 'H₂O', logging: 'Log', fiber: 'Fib', balance: 'Bal' };
   breakdown.innerHTML = Object.entries(factors).map(([key, val]) => {
     const max = maxes[key] || 10;
     const pct = val / max;
@@ -2714,6 +3688,7 @@ function logTemplate(idx) {
   const t = templates[idx];
   if (!t) return;
   state.meals.push({ ...t, time: new Date().toISOString() });
+  applyBeverageHydration(t);
   saveState();
   renderLog();
   renderDashboard();
@@ -2809,7 +3784,7 @@ async function submitPantryInput() {
 function renderPantrySuggestions() {
   const track = document.getElementById('suggestionsTrack');
   const hint = document.getElementById('swipeHint');
-  const filtered = state.suggestions;
+  const filtered = state.flavorFilter === 'all' ? state.suggestions : state.suggestions.filter(s => s.category === state.flavorFilter);
 
   if (!filtered.length) {
     track.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);font-size:12px;">No meals found for those ingredients.</div>';
@@ -2844,6 +3819,7 @@ function renderPantrySuggestions() {
     if (meal) bindCardTap(card, meal);
   });
 
+  addSentinel();
   initCarouselDrag();
 }
 
@@ -2961,9 +3937,11 @@ function showDetail(index) { openDetailPanel(state.meals[index], 'logged', index
 function openDetailPanel(meal, mode, index) {
   // mode: 'logged' (show portion adjust + delete), 'suggestion' (show add + cart)
   const isLogged = mode === 'logged';
-  let detailPortion = 1;
+  let detailPortionPct = 0.5; // start at 1x
   const baseMeal = { ...meal };
   const cleanName = baseMeal.name.replace(/\s*\(\d+\.?\d*x\)\s*$/, '');
+
+  function getDetailMult() { return pctToMultiplier(detailPortionPct); }
 
   detailContent.innerHTML = `
     <div class="detail-name">${cleanName}</div>
@@ -2980,13 +3958,12 @@ function openDetailPanel(meal, mode, index) {
     <div class="portion-section">
       <div class="portion-header">
         <div class="portion-label">PORTION</div>
-        <div class="portion-value" id="detPortionDisplay">1x</div>
+        <div class="portion-value" id="detPortionDisplay">a serving</div>
       </div>
-      <div class="portion-track">
-        <div class="portion-rail"><div class="portion-fill" id="detPortionFill" style="width:${(2/6)*100}%"></div></div>
-        <div class="portion-stops" id="detPortionStops">
-          ${PORTION_STOPS.map(v => `<div class="portion-stop ${v===1?'active':''}" data-val="${v}"><span class="portion-stop-label">${v===1?'1x':v+'x'}</span></div>`).join('')}
-        </div>
+      <div class="ing-slider-track" id="detSliderTrack" style="margin:8px 0 4px;">
+        <div class="ing-slider-rail"></div>
+        <div class="ing-slider-fill" id="detSliderFill" style="width:50%"></div>
+        <div class="ing-slider-thumb" id="detSliderThumb" style="left:calc(6px + (100% - 12px) * 0.5)"></div>
       </div>
     </div>
     <div class="detail-actions">
@@ -3012,33 +3989,51 @@ function openDetailPanel(meal, mode, index) {
   detailOverlay.classList.add('open');
   detailPanel.classList.add('open');
 
-  // Fetch recipe async (doesn't block panel open)
+  // Fetch recipe async
   loadRecipeIntoDetail(cleanName, meal);
 
-  // Portion controls in detail panel
-  document.querySelectorAll('#detPortionStops .portion-stop').forEach(stop => {
-    stop.addEventListener('click', () => {
-      detailPortion = parseFloat(stop.dataset.val);
-      const s = scaleMeal(baseMeal, detailPortion);
-      document.getElementById('detMacroCal').textContent = s.calories;
-      document.getElementById('detMacroProt').textContent = s.protein + 'g';
-      document.getElementById('detMacroCarbs').textContent = s.carbs + 'g';
-      document.getElementById('detMacroFat').textContent = s.fat + 'g';
-      document.getElementById('detPortionDisplay').textContent = detailPortion + 'x';
-      document.querySelectorAll('#detPortionStops .portion-stop').forEach(st => st.classList.toggle('active', parseFloat(st.dataset.val) === detailPortion));
-      const idx2 = PORTION_STOPS.indexOf(detailPortion);
-      document.getElementById('detPortionFill').style.width = ((idx2 / (PORTION_STOPS.length - 1)) * 100) + '%';
+  // Continuous slider for detail panel
+  const detTrack = document.getElementById('detSliderTrack');
+  const detThumb = document.getElementById('detSliderThumb');
+  const detFill = document.getElementById('detSliderFill');
+  const detLabel = document.getElementById('detPortionDisplay');
 
-      // Show update button if logged meal portion changed
-      if (isLogged && detailPortion !== 1) {
-        document.getElementById('detailUpdateBtn').style.display = '';
-        document.getElementById('detailSpacer').style.display = 'none';
-      } else if (isLogged) {
-        document.getElementById('detailUpdateBtn').style.display = 'none';
-        document.getElementById('detailSpacer').style.display = '';
-      }
-    });
-  });
+  const updateDetailSlider = (clientX) => {
+    const rect = detTrack.getBoundingClientRect();
+    const pad = 6;
+    const usable = rect.width - pad * 2;
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left - pad) / usable));
+    detailPortionPct = pct;
+    const mult = getDetailMult();
+
+    detThumb.style.left = `calc(6px + (100% - 12px) * ${pct})`;
+    detFill.style.width = (pct * 100) + '%';
+    detLabel.textContent = getPortionLabel(pct);
+
+    const cal = Math.round(baseMeal.calories * mult);
+    const prot = Math.round(baseMeal.protein * mult);
+    const carbs = Math.round(baseMeal.carbs * mult);
+    const fat = Math.round(baseMeal.fat * mult);
+    document.getElementById('detMacroCal').textContent = cal;
+    document.getElementById('detMacroProt').textContent = prot + 'g';
+    document.getElementById('detMacroCarbs').textContent = carbs + 'g';
+    document.getElementById('detMacroFat').textContent = fat + 'g';
+
+    if (isLogged && Math.abs(pct - 0.5) > 0.04) {
+      document.getElementById('detailUpdateBtn').style.display = '';
+      if (document.getElementById('detailSpacer')) document.getElementById('detailSpacer').style.display = 'none';
+    } else if (isLogged) {
+      document.getElementById('detailUpdateBtn').style.display = 'none';
+      if (document.getElementById('detailSpacer')) document.getElementById('detailSpacer').style.display = '';
+    }
+  };
+
+  let detDragging = false;
+  detTrack.addEventListener('mousedown', (e) => { detDragging = true; updateDetailSlider(e.clientX); });
+  document.addEventListener('mousemove', (e) => { if (detDragging) updateDetailSlider(e.clientX); });
+  document.addEventListener('mouseup', () => { detDragging = false; });
+  detTrack.addEventListener('touchstart', (e) => { e.preventDefault(); updateDetailSlider(e.touches[0].clientX); }, { passive: false });
+  detTrack.addEventListener('touchmove', (e) => { e.preventDefault(); updateDetailSlider(e.touches[0].clientX); }, { passive: false });
 
   if (isLogged) {
     document.getElementById('detailSaveTemplate').addEventListener('click', () => {
@@ -3052,17 +4047,22 @@ function openDetailPanel(meal, mode, index) {
       loadSuggestions();
     });
     document.getElementById('detailUpdateBtn').addEventListener('click', () => {
-      const s = scaleMeal(baseMeal, detailPortion);
-      state.meals[index] = { ...state.meals[index], ...s, name: cleanName + (detailPortion !== 1 ? ` (${detailPortion}x)` : '') };
+      const mult = getDetailMult();
+      const s = { calories: Math.round(baseMeal.calories * mult), protein: Math.round(baseMeal.protein * mult), carbs: Math.round(baseMeal.carbs * mult), fat: Math.round(baseMeal.fat * mult) };
+      const label = getPortionLabel(detailPortionPct);
+      state.meals[index] = { ...state.meals[index], ...s, name: cleanName + (Math.abs(detailPortionPct - 0.5) > 0.04 ? ` (${label})` : '') };
       saveState(); renderLog(); renderDashboard(); closeDetail();
       showToast('PORTION UPDATED');
     });
   } else {
     document.getElementById('detailAddBtn').addEventListener('click', () => {
-      const s = scaleMeal(meal, detailPortion);
+      const mult = getDetailMult();
+      const s = { calories: Math.round(meal.calories * mult), protein: Math.round(meal.protein * mult), carbs: Math.round(meal.carbs * mult), fat: Math.round(meal.fat * mult) };
+      const label = getPortionLabel(detailPortionPct);
       const finalMeal = { ...meal, ...s };
-      if (detailPortion !== 1) finalMeal.name = cleanName + ` (${detailPortion}x)`;
+      if (Math.abs(detailPortionPct - 0.5) > 0.04) finalMeal.name = cleanName + ` (${label})`;
       state.meals.push({ ...finalMeal, time: new Date().toISOString() });
+      applyBeverageHydration(finalMeal);
       saveState(); renderLog(); renderDashboard(); closeDetail();
       showToast('ADDED TO LOG');
       pulseRing(); loadSuggestions();
@@ -3204,63 +4204,382 @@ cameraInput.addEventListener('change', async (e) => {
   cameraInput.value = '';
 });
 
+const ING_STOPS = ['pinch', 'light', 'regular', 'generous', 'loaded'];
+let scanIngredients = []; // working copy of ingredients
+let scanMealMeta = {};    // name, description, tags, etc
+
 function renderScanResult(data, thumbSrc) {
-  const scaled = scaleMeal(baseMealData, currentPortion);
-  scanBody.innerHTML = `<div class="scan-result-content">
-    ${thumbSrc ? `<img class="scan-photo-thumb" src="${thumbSrc}" alt="Scanned meal"/>` : ''}
-    <div class="scan-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
-    <div class="scan-identified-label">Identified</div>
-    <div class="scan-meal-name">${data.name}</div>
-    <div class="scan-meal-desc">${data.description||''}</div>
-    <div class="scan-macro-grid">
-      <div class="scan-stat"><div class="scan-stat-val gold" id="scanCal">${scaled.calories}</div><div class="scan-stat-label">CAL</div></div>
-      <div class="scan-stat"><div class="scan-stat-val" id="scanProt">${scaled.protein}g</div><div class="scan-stat-label">PROTEIN</div></div>
-      <div class="scan-stat"><div class="scan-stat-val" id="scanCarbs">${scaled.carbs}g</div><div class="scan-stat-label">CARBS</div></div>
-      <div class="scan-stat"><div class="scan-stat-val" id="scanFat">${scaled.fat}g</div><div class="scan-stat-label">FAT</div></div>
+  scanMealMeta = { name: data.name, description: data.description, health_note: data.health_note, tags: data.tags, category: data.category };
+
+  // If API returned ingredients, use them; otherwise create a single-ingredient fallback
+  if (data.ingredients && data.ingredients.length > 0) {
+    scanIngredients = data.ingredients.map((ing, i) => ({
+      id: i,
+      name: ing.name,
+      emoji: ing.emoji || '🥘',
+      portionPct: 0.5, // start at "a serving" (1x)
+      calories: ing.calories || 0,
+      protein: ing.protein || 0,
+      carbs: ing.carbs || 0,
+      fat: ing.fat || 0,
+      fiber: ing.fiber || 0,
+      _baseCal: ing.calories || 0,
+      _baseProt: ing.protein || 0,
+      _baseCarbs: ing.carbs || 0,
+      _baseFat: ing.fat || 0,
+    }));
+  } else {
+    scanIngredients = [{
+      id: 0, name: data.name, emoji: '🍽️', portionPct: 0.5,
+      calories: data.calories || 0, protein: data.protein || 0,
+      carbs: data.carbs || 0, fat: data.fat || 0, fiber: data.fiber || 0,
+      _baseCal: data.calories || 0, _baseProt: data.protein || 0,
+      _baseCarbs: data.carbs || 0, _baseFat: data.fat || 0,
+    }];
+  }
+
+  renderIngredientEditor(thumbSrc);
+}
+
+// Continuous portion system — no snap points
+// pct 0 = 0.15x (a trace), pct 0.5 = 1x (a serving), pct 1 = 2.5x (loaded)
+// Uses exponential curve so the middle feels natural
+
+function pctToMultiplier(pct) {
+  // Curve: slow growth at low end, faster at high end
+  // 0% → 0.15x, 50% → 1.0x, 100% → 2.5x
+  return 0.15 + (2.35 * pct * pct * (3 - 2 * pct)) ; // smoothstep
+}
+
+function multiplierToPct(mult) {
+  // Inverse of smoothstep (approximate via binary search)
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 16; i++) {
+    const mid = (lo + hi) / 2;
+    if (pctToMultiplier(mid) < mult) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+function getPortionLabel(pct) {
+  if (pct < 0.06) return 'a trace';
+  if (pct < 0.14) return 'a taste';
+  if (pct < 0.22) return 'a pinch';
+  if (pct < 0.30) return 'a little';
+  if (pct < 0.38) return 'light';
+  if (pct < 0.46) return 'modest';
+  if (pct < 0.54) return 'a serving';
+  if (pct < 0.62) return 'solid';
+  if (pct < 0.70) return 'generous';
+  if (pct < 0.78) return 'heaping';
+  if (pct < 0.86) return 'big portion';
+  if (pct < 0.94) return 'piled high';
+  return 'loaded';
+}
+
+// Backward compat for discrete portions (used by replace/add)
+function getPortionMultiplier(portion) {
+  const mult = { pinch: 0.25, light: 0.6, regular: 1, generous: 1.5, loaded: 2 };
+  return mult[portion] || 1;
+}
+
+function ingPortionToPct(portion) {
+  // Convert legacy discrete portion to pct
+  const mult = getPortionMultiplier(portion);
+  return multiplierToPct(mult);
+}
+
+function getIngTotals() {
+  return scanIngredients.reduce((a, ing) => {
+    const m = pctToMultiplier(ing.portionPct ?? 0.5);
+    return {
+      calories: a.calories + Math.round(ing._baseCal * m),
+      protein: a.protein + Math.round(ing._baseProt * m),
+      carbs: a.carbs + Math.round(ing._baseCarbs * m),
+      fat: a.fat + Math.round(ing._baseFat * m),
+    };
+  }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+}
+
+function renderIngredientEditor(thumbSrc) {
+  const totals = getIngTotals();
+
+  scanBody.innerHTML = `<div class="scan-result-content" style="text-align:left;">
+    <div style="text-align:center;width:100%;margin-bottom:16px;">
+      ${thumbSrc ? `<img class="scan-photo-thumb" src="${thumbSrc}" alt="Scanned meal"/>` : ''}
+      <div class="scan-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <div class="scan-identified-label">Identified</div>
+      <div class="scan-meal-name">${scanMealMeta.name}</div>
+      <div style="font-size:10px;color:var(--ink-3);letter-spacing:.08em;margin-top:4px;margin-bottom:4px;">Adjust ingredients below</div>
     </div>
-    ${data.health_note ? `<div class="scan-health-note">"${data.health_note}"</div>` : ''}
-    <div class="portion-section">
-      <div class="portion-header">
-        <div class="portion-label">PORTION</div>
-        <div class="portion-value" id="portionDisplay">${currentPortion}x</div>
+
+    <div class="ing-editor">
+      <div class="ing-totals" id="ingTotals">
+        <div class="ing-total-cell"><div class="ing-total-val gold" id="ingTotalCal">${totals.calories}</div><div class="ing-total-label">CAL</div></div>
+        <div class="ing-total-cell"><div class="ing-total-val" id="ingTotalProt">${totals.protein}g</div><div class="ing-total-label">PROTEIN</div></div>
+        <div class="ing-total-cell"><div class="ing-total-val" id="ingTotalCarbs">${totals.carbs}g</div><div class="ing-total-label">CARBS</div></div>
+        <div class="ing-total-cell"><div class="ing-total-val" id="ingTotalFat">${totals.fat}g</div><div class="ing-total-label">FAT</div></div>
       </div>
-      <div class="portion-track">
-        <div class="portion-rail"><div class="portion-fill" id="portionFill"></div></div>
-        <div class="portion-stops" id="portionStops">
-          ${PORTION_STOPS.map((v,i) => `<div class="portion-stop ${v===currentPortion?'active':''}" data-val="${v}"><span class="portion-stop-label">${v===1?'1x':v+'x'}</span></div>`).join('')}
-        </div>
+
+      <div class="ing-list" id="ingList"></div>
+
+      <div class="ing-add-row">
+        <input class="ing-add-input" id="ingAddInput" type="text" placeholder="Add missing ingredient..." />
+        <button class="ing-add-btn" onclick="addIngredientManual()">ADD</button>
       </div>
     </div>
-    <button class="scan-add-btn" id="scanAddBtn">Add to Log</button>
+
+    <button class="scan-add-btn" id="scanAddBtn">Confirm & Log</button>
   </div>`;
 
-  updatePortionFill();
+  renderIngredientRows();
 
-  // Portion stop clicks
-  document.querySelectorAll('#portionStops .portion-stop').forEach(stop => {
-    stop.addEventListener('click', () => {
-      currentPortion = parseFloat(stop.dataset.val);
-      const s = scaleMeal(baseMealData, currentPortion);
-      document.getElementById('scanCal').textContent = s.calories;
-      document.getElementById('scanProt').textContent = s.protein + 'g';
-      document.getElementById('scanCarbs').textContent = s.carbs + 'g';
-      document.getElementById('scanFat').textContent = s.fat + 'g';
-      document.getElementById('portionDisplay').textContent = currentPortion + 'x';
-      document.querySelectorAll('#portionStops .portion-stop').forEach(st => st.classList.toggle('active', parseFloat(st.dataset.val) === currentPortion));
-      updatePortionFill();
-    });
-  });
+  document.getElementById('ingAddInput').addEventListener('keydown', e => { if (e.key === 'Enter') addIngredientManual(); });
 
   document.getElementById('scanAddBtn').addEventListener('click', () => {
-    const finalMeal = scaleMeal(baseMealData, currentPortion);
-    finalMeal.name = baseMealData.name;
-    finalMeal.description = baseMealData.description;
-    finalMeal.health_note = baseMealData.health_note;
-    finalMeal.tags = baseMealData.tags;
-    finalMeal.category = baseMealData.category;
-    if (currentPortion !== 1) finalMeal.name += ` (${currentPortion}x)`;
+    const totals = getIngTotals();
+    const finalMeal = {
+      ...totals,
+      name: scanMealMeta.name,
+      description: scanMealMeta.description,
+      health_note: scanMealMeta.health_note,
+      tags: scanMealMeta.tags,
+      category: scanMealMeta.category,
+      ingredients: scanIngredients.map(ing => ({ name: ing.name, portion: getPortionLabel(ing.portionPct ?? 0.5), emoji: ing.emoji })),
+    };
     addScannedMeal(finalMeal);
   });
+}
+
+function renderIngredientRows() {
+  const list = document.getElementById('ingList');
+  if (!list) return;
+
+  list.innerHTML = scanIngredients.map((ing, idx) => {
+    const pct = ing.portionPct ?? 0.5;
+    const m = pctToMultiplier(pct);
+    const cal = Math.round(ing._baseCal * m);
+    const prot = Math.round(ing._baseProt * m);
+    const carbs = Math.round(ing._baseCarbs * m);
+    const fat = Math.round(ing._baseFat * m);
+    const portionLabel = getPortionLabel(pct);
+    const isDefault = Math.abs(pct - 0.5) < 0.04;
+
+    return `<div class="ing-row" id="ingRow${idx}" data-idx="${idx}">
+      <div class="ing-header">
+        <div class="ing-emoji">${ing.emoji}</div>
+        <div class="ing-name">${ing.name}</div>
+        <div class="ing-actions">
+          <button class="ing-action-btn replace" onclick="showReplacePanel(${idx})">Replace</button>
+          <button class="ing-action-btn remove" onclick="removeIngredient(${idx})">✕</button>
+        </div>
+      </div>
+      <div class="ing-slider-row">
+        <div class="ing-slider-label${!isDefault ? ' active' : ''}">${portionLabel}</div>
+        <div class="ing-slider-track" data-idx="${idx}">
+          <div class="ing-slider-rail"></div>
+          <div class="ing-slider-fill" style="width:${pct * 100}%"></div>
+          <div class="ing-slider-thumb" style="left:calc(6px + (100% - 12px) * ${pct})"></div>
+        </div>
+      </div>
+      <div class="ing-macros">
+        <span class="ing-macro">${cal} cal</span>
+        <span class="ing-macro">${prot}g P</span>
+        <span class="ing-macro">${carbs}g C</span>
+        <span class="ing-macro">${fat}g F</span>
+      </div>
+      <div id="replacePanel${idx}"></div>
+    </div>`;
+  }).join('');
+
+  // Bind continuous slider drag
+  list.querySelectorAll('.ing-slider-track').forEach(track => {
+    const idx = parseInt(track.dataset.idx);
+    const thumb = track.querySelector('.ing-slider-thumb');
+    const fill = track.querySelector('.ing-slider-fill');
+    const row = track.closest('.ing-row');
+    const label = row.querySelector('.ing-slider-label');
+    const macros = row.querySelectorAll('.ing-macro');
+
+    const updateSlider = (clientX) => {
+      const rect = track.getBoundingClientRect();
+      const pad = 6;
+      const usable = rect.width - pad * 2;
+      const raw = (clientX - rect.left - pad) / usable;
+      const pct = Math.max(0, Math.min(1, raw));
+      const mult = pctToMultiplier(pct);
+      const ing = scanIngredients[idx];
+
+      // Update visual immediately — no re-render, pure DOM
+      thumb.style.left = `calc(6px + (100% - 12px) * ${pct})`;
+      fill.style.width = (pct * 100) + '%';
+
+      // Update label with relatable term
+      label.textContent = getPortionLabel(pct);
+      label.classList.toggle('active', Math.abs(pct - 0.5) >= 0.04);
+
+      // Update per-ingredient macros continuously
+      if (macros[0]) macros[0].textContent = Math.round(ing._baseCal * mult) + ' cal';
+      if (macros[1]) macros[1].textContent = Math.round(ing._baseProt * mult) + 'g P';
+      if (macros[2]) macros[2].textContent = Math.round(ing._baseCarbs * mult) + 'g C';
+      if (macros[3]) macros[3].textContent = Math.round(ing._baseFat * mult) + 'g F';
+
+      // Store continuous pct
+      ing.portionPct = pct;
+
+      // Update totals live
+      updateIngTotals();
+    };
+
+    // Mouse
+    let mouseDown = false;
+    track.addEventListener('mousedown', (e) => { mouseDown = true; updateSlider(e.clientX); });
+    document.addEventListener('mousemove', (e) => { if (mouseDown) updateSlider(e.clientX); });
+    document.addEventListener('mouseup', () => { mouseDown = false; });
+
+    // Touch
+    track.addEventListener('touchstart', (e) => { e.preventDefault(); updateSlider(e.touches[0].clientX); }, { passive: false });
+    track.addEventListener('touchmove', (e) => { e.preventDefault(); updateSlider(e.touches[0].clientX); }, { passive: false });
+  });
+}
+
+function updateIngTotals() {
+  const t = getIngTotals();
+  const calEl = document.getElementById('ingTotalCal');
+  const protEl = document.getElementById('ingTotalProt');
+  const carbsEl = document.getElementById('ingTotalCarbs');
+  const fatEl = document.getElementById('ingTotalFat');
+  if (!calEl) return;
+
+  // Flash animation on change
+  [calEl, protEl, carbsEl, fatEl].forEach(el => {
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 200);
+  });
+
+  calEl.textContent = t.calories;
+  protEl.textContent = t.protein + 'g';
+  carbsEl.textContent = t.carbs + 'g';
+  fatEl.textContent = t.fat + 'g';
+}
+
+function removeIngredient(idx) {
+  const row = document.getElementById('ingRow' + idx);
+  if (row) {
+    row.classList.add('removing');
+    setTimeout(() => {
+      scanIngredients.splice(idx, 1);
+      renderIngredientRows();
+      updateIngTotals();
+    }, 250);
+  } else {
+    scanIngredients.splice(idx, 1);
+    renderIngredientRows();
+    updateIngTotals();
+  }
+}
+
+async function showReplacePanel(idx) {
+  const panel = document.getElementById('replacePanel' + idx);
+  if (!panel) return;
+
+  // Toggle off if already open
+  if (panel.innerHTML) { panel.innerHTML = ''; return; }
+
+  panel.innerHTML = '<div class="ing-replace-loading"><div class="spin" style="width:12px;height:12px;border:1px solid var(--dim);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;margin-right:8px;vertical-align:middle;"></div>Finding alternatives...</div>';
+
+  try {
+    const resp = await fetch('/api/replace-ingredient', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ingredient: scanIngredients[idx].name, meal_context: scanMealMeta.name }),
+    });
+    const data = await resp.json();
+    const alts = data.alternatives || [];
+
+    if (alts.length === 0) {
+      panel.innerHTML = '<div class="ing-replace-loading">No alternatives found</div>';
+      return;
+    }
+
+    panel.innerHTML = `<div class="ing-replace-panel">
+      ${alts.map((alt, ai) => `<div class="ing-replace-option" onclick="replaceIngredient(${idx}, ${ai})">
+        <div class="ing-replace-emoji">${alt.emoji || '🥘'}</div>
+        <div class="ing-replace-name">${alt.name}</div>
+        <div class="ing-replace-meta">${alt.calories} cal · ${alt.protein}g P</div>
+      </div>`).join('')}
+    </div>`;
+
+    // Store alternatives for use when clicked
+    scanIngredients[idx]._alternatives = alts;
+  } catch (e) {
+    panel.innerHTML = '<div class="ing-replace-loading">Failed to load alternatives</div>';
+  }
+}
+
+function replaceIngredient(idx, altIdx) {
+  const alt = scanIngredients[idx]._alternatives?.[altIdx];
+  if (!alt) return;
+
+  scanIngredients[idx] = {
+    ...scanIngredients[idx],
+    name: alt.name,
+    emoji: alt.emoji || '🥘',
+    portionPct: 0.5,
+    calories: alt.calories || 0,
+    protein: alt.protein || 0,
+    carbs: alt.carbs || 0,
+    fat: alt.fat || 0,
+    fiber: alt.fiber || 0,
+    _baseCal: alt.calories || 0,
+    _baseProt: alt.protein || 0,
+    _baseCarbs: alt.carbs || 0,
+    _baseFat: alt.fat || 0,
+    _alternatives: null,
+  };
+
+  renderIngredientRows();
+  updateIngTotals();
+}
+
+async function addIngredientManual() {
+  const input = document.getElementById('ingAddInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  // Quick AI call to get macros for this ingredient
+  try {
+    const resp = await fetch('/api/describe', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const data = await resp.json();
+    scanIngredients.push({
+      id: scanIngredients.length,
+      name: data.name || text,
+      emoji: '🥘',
+      portionPct: 0.5,
+      calories: data.calories || 0,
+      protein: data.protein || 0,
+      carbs: data.carbs || 0,
+      fat: data.fat || 0,
+      fiber: data.fiber || 0,
+      _baseCal: data.calories || 0,
+      _baseProt: data.protein || 0,
+      _baseCarbs: data.carbs || 0,
+      _baseFat: data.fat || 0,
+    });
+  } catch (e) {
+    scanIngredients.push({
+      id: scanIngredients.length,
+      name: text, emoji: '🥘', portionPct: 0.5,
+      calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0,
+      _baseCal: 0, _baseProt: 0, _baseCarbs: 0, _baseFat: 0,
+    });
+  }
+
+  renderIngredientRows();
+  updateIngTotals();
 }
 
 function updatePortionFill() {
@@ -3280,8 +4599,39 @@ function scaleMeal(base, portion) {
   };
 }
 
+function checkBeverageHydration(meal) {
+  const name = (meal.name || '').toLowerCase();
+  const desc = (meal.description || meal.one_liner || '').toLowerCase();
+  const text = name + ' ' + desc;
+
+  // Match beverages — water, tea, coffee, juice, smoothie, shake, etc.
+  const beveragePatterns = /\bwater\b|tea\b|coffee|latte|cappuccino|espresso|americano|matcha|juice|smoothie|shake|lemonade|kombucha|seltzer|sparkling|coconut water|milk\b|almond milk|oat milk|protein shake|iced tea|cold brew|infused water|herbal|electrolyte|gatorade|powerade|broth|soup\b/;
+
+  // Exclude alcohol — doesn't hydrate
+  const alcoholPatterns = /\bbeer\b|wine\b|whiskey|vodka|rum\b|gin\b|tequila|cocktail|margarita|martini|bourbon|champagne|hard seltzer|sangria|mule\b/;
+
+  if (!beveragePatterns.test(text) || alcoholPatterns.test(text)) return 0;
+
+  // Estimate glasses: most beverages are 1 glass, large smoothies/shakes = 2
+  const large = /large|grande|venti|big|32.?oz|24.?oz|xl|tall/;
+  const small = /shot|espresso|tiny|mini|4.?oz/;
+
+  if (small.test(text)) return 0; // too small to count
+  if (large.test(text)) return 2;
+  return 1;
+}
+
+function applyBeverageHydration(meal) {
+  const glasses = checkBeverageHydration(meal);
+  if (glasses > 0 && state.water < WATER_GOAL) {
+    state.water = Math.min(state.water + glasses, WATER_GOAL);
+    renderWater();
+  }
+}
+
 function addScannedMeal(data) {
   state.meals.push({ ...data, time: new Date().toISOString() });
+  applyBeverageHydration(data);
   saveState(); renderLog(); renderDashboard();
   scanOverlay.classList.remove('open'); scanLine.style.display='none';
   showToast('ADDED TO LOG');
@@ -3514,7 +4864,17 @@ async function loadSuggestions(flavor, goalFocus) {
   }
 
   try {
-    const payload = { remaining_cal:rem.calories, remaining_protein:rem.protein, flavor };
+    const totals = getTotals();
+    const h = new Date().getHours();
+    const payload = {
+      remaining_cal: rem.calories, remaining_protein: rem.protein,
+      remaining_carbs: rem.carbs, remaining_fat: rem.fat,
+      eaten_today: state.meals.map(m => m.name).slice(0, 6),
+      time_of_day: h < 5 ? 'late_night' : h < 10 ? 'breakfast' : h < 12 ? 'late_morning' : h < 14 ? 'lunch' : h < 17 ? 'afternoon_snack' : h < 21 ? 'dinner' : 'late_night',
+      flavor,
+    };
+    // Add pantry items if available
+    try { const p = getPantry(); const items = Object.keys(p).slice(0, 15); if (items.length) payload.pantry = items; } catch(e) {}
     if (goalFocus) payload.goal_focus = goalFocus;
     const diets = getProfileDiets();
     if (diets.length && !diets.includes('none')) payload.diets = diets;
@@ -3536,14 +4896,66 @@ async function loadMoreSuggestions() {
   state.loadingMore = true;
   try {
     const rem = getRemaining();
-    const resp = await fetch('/api/suggestions', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ remaining_cal:rem.calories, remaining_protein:rem.protein, flavor: state.flavorFilter }) });
+    let resp;
+
+    if (state.pantryMode) {
+      // Load more pantry-based suggestions
+      const p = getPantry();
+      const items = Object.keys(p);
+      if (items.length === 0) { state.loadingMore = false; return; }
+      const flavor = state.flavorFilter !== 'all' ? `. Only ${state.flavorFilter} options.` : '';
+      resp = await fetch('/api/pantry-meals', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ingredients: items.join(', ') + '. Give me DIFFERENT meals than: ' + Array.from(state.suggestionsUsed).join(', ') + flavor,
+          remaining_cal: rem.calories,
+          remaining_protein: rem.protein
+        }),
+      });
+    } else {
+      resp = await fetch('/api/suggestions', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ remaining_cal:rem.calories, remaining_protein:rem.protein, flavor: state.flavorFilter }) });
+    }
+
     if (!resp.ok) throw new Error('err');
     const data = await resp.json();
     const newMeals = (data.meals||[]).filter(m => !state.suggestionsUsed.has(m.name.toLowerCase()));
     newMeals.forEach(m => { state.suggestions.push(m); state.suggestionsUsed.add(m.name.toLowerCase()); });
-    if (newMeals.length > 0) appendSuggestionCards(newMeals);
+    if (newMeals.length > 0) {
+      if (state.pantryMode) {
+        appendPantrySuggestionCards(newMeals);
+      } else {
+        appendSuggestionCards(newMeals);
+      }
+    }
   } catch(e) {}
   state.loadingMore = false;
+}
+
+function appendPantrySuggestionCards(meals) {
+  const track = document.getElementById('suggestionsTrack');
+  const oldSentinel = track.querySelector('.suggestion-sentinel');
+  if (oldSentinel) oldSentinel.remove();
+
+  const filtered = state.flavorFilter === 'all' ? meals : meals.filter(s => s.category === state.flavorFilter);
+
+  filtered.forEach((s) => {
+    const tag = (s.tags && s.tags[0]) || 'BALANCED';
+    const cls = getTagClass(tag);
+    const liner = s.one_liner || '';
+    const uses = s.uses ? `<div class="suggestion-uses">Uses: ${s.uses.join(', ')}</div>` : '';
+    const needs = s.needs && s.needs.length ? `<div class="suggestion-needs">+ ${s.needs.join(', ')}</div>` : '';
+    const card = document.createElement('div');
+    card.className = 'suggestion-card';
+    card.innerHTML = `<div class="suggestion-tag ${cls}"><span class="tag-dot"></span> ${tag}</div>
+      <div class="suggestion-name">${s.name}</div>
+      ${liner ? `<div class="suggestion-liner">${liner}</div>` : ''}
+      ${uses}${needs}
+      <div class="suggestion-meta"><div class="suggestion-cal">${s.calories} <span class="suggestion-cal-unit">cal</span></div><div class="suggestion-macros">${s.protein}g P · ${s.carbs}g C · ${s.fat}g F</div></div>`;
+    bindCardTap(card, s);
+    track.appendChild(card);
+  });
+
+  addSentinel();
 }
 
 function appendSuggestionCards(meals) {
@@ -3657,7 +5069,7 @@ document.querySelectorAll('.flavor-btn').forEach(btn => {
     btn.classList.add('active');
     state.flavorFilter = btn.dataset.flavor;
 
-    if (btn.dataset.flavor === 'pantry') {
+    if (state.pantryMode) {
       loadPantrySuggestions();
     } else if (state.suggestions.length > 0 && !state.goalFocus) {
       renderSuggestions();
@@ -3667,21 +5079,42 @@ document.querySelectorAll('.flavor-btn').forEach(btn => {
   });
 });
 
+// Pantry toggle (independent of flavor)
+state.pantryMode = false;
+document.getElementById('pantryToggleBtn').addEventListener('click', () => {
+  state.pantryMode = !state.pantryMode;
+  document.getElementById('pantryToggleBtn').classList.toggle('active', state.pantryMode);
+
+  if (state.pantryMode) {
+    loadPantrySuggestions();
+  } else {
+    loadSuggestions(state.flavorFilter);
+  }
+});
+
 async function loadPantrySuggestions() {
   const p = getPantry();
   const items = Object.keys(p);
+  const track = document.getElementById('suggestionsTrack');
+  const hint = document.getElementById('swipeHint');
+  const label = document.getElementById('suggestionsLabel');
+
   if (items.length === 0) {
-    document.getElementById('suggestionsLabel').textContent = 'PANTRY IS EMPTY';
-    document.getElementById('suggestionsTrack').innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);font-size:12px;letter-spacing:.08em;">Add items to your pantry first.<br>Go to Pantry tab to get started.</div>';
-    document.getElementById('swipeHint').style.display = 'none';
+    label.textContent = 'PANTRY';
+    track.innerHTML = `<div style="padding:48px 24px;text-align:center;">
+      <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--muted)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:14px;opacity:.6"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/></svg>
+      <div style="font-family:var(--serif);font-style:italic;font-size:18px;color:var(--ink);margin-bottom:8px;">Stock your pantry</div>
+      <div style="font-size:12px;color:var(--ink-3);letter-spacing:.04em;line-height:1.6;max-width:260px;margin:0 auto;">Add ingredients you have at home and we'll suggest meals you can actually make.</div>
+      <button onclick="openPantryPage();state.pantryMode=false;document.getElementById('pantryToggleBtn').classList.remove('active');" style="margin-top:16px;padding:8px 20px;font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;font-family:var(--sans);color:var(--gold);background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:6px;cursor:pointer;">Open Pantry</button>
+    </div>`;
+    hint.style.display = 'none';
     return;
   }
 
   const text = items.join(', ');
-  document.getElementById('suggestionsLabel').textContent = 'FROM YOUR KITCHEN';
-  const track = document.getElementById('suggestionsTrack');
+  label.textContent = 'FROM YOUR KITCHEN';
   track.innerHTML = '<div class="skeleton-track"><div class="skeleton-card"><div class="skeleton-line"></div><div class="skeleton-line wide"></div><div class="skeleton-line narrow"></div><div class="skeleton-line bottom"></div></div><div class="skeleton-card"><div class="skeleton-line"></div><div class="skeleton-line wide"></div><div class="skeleton-line narrow"></div><div class="skeleton-line bottom"></div></div><div class="skeleton-card"><div class="skeleton-line"></div><div class="skeleton-line wide"></div><div class="skeleton-line narrow"></div><div class="skeleton-line bottom"></div></div></div>';
-  document.getElementById('swipeHint').style.display = 'none';
+  hint.style.display = 'none';
 
   try {
     const rem = getRemaining();
@@ -3748,11 +5181,30 @@ async function sendChat() {
     const totals=getTotals(), remaining=getRemaining();
     let profile = {};
     try { profile = JSON.parse(localStorage.getItem('fuel_profile') || '{}'); } catch(e){}
+    // Build recent meal history (last 7 days)
+    const allDays = loadAllDays();
+    const recentDays = {};
+    const today = new Date();
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      const k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      if (allDays[k] && allDays[k].meals && allDays[k].meals.length > 0) {
+        recentDays[k] = {
+          meals: allDays[k].meals.map(m => m.name),
+          score: allDays[k].score || null,
+          water: allDays[k].water || 0,
+        };
+      }
+    }
+
+    // Get pantry items
+    const pantryItems = Object.entries(getPantry()).map(([k, v]) => v.name || k);
+
     const resp = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
       messages: state.chatHistory.slice(-10).map(m=>({role:m.role,content:m.content})),
       daily_state: {
         consumed: totals, remaining, goals: GOALS,
-        meals_logged: state.meals.map(m => m.name),
+        meals_logged: state.meals.map(m => ({ name: m.name, calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat })),
         meal_count: state.meals.length,
         water: state.water, water_goal: WATER_GOAL,
         profile: {
@@ -3763,6 +5215,8 @@ async function sendChat() {
           activity: profile.activityMult || 0,
         },
         streak: getStreak(),
+        pantry: pantryItems,
+        recent_history: recentDays,
       }
     }) });
     td.remove(); if(!resp.ok) throw new Error('err');
@@ -3777,11 +5231,41 @@ async function sendChat() {
         const action = JSON.parse(actionMatch[1]);
         if (action.type === 'update_profile') {
           executeProfileUpdate(action.changes);
+        } else if (action.type === 'add_to_cart') {
+          // Add grocery items to cart
+          const items = action.items || [];
+          items.forEach(item => {
+            state.cart.push({
+              name: item.name || 'Item',
+              emoji: item.emoji || '🛒',
+              qty: item.qty || '',
+              category: item.category || 'pantry',
+              fromMeal: action.meal || '',
+            });
+          });
+          localStorage.setItem('fuel_cart', JSON.stringify(state.cart));
+          updateCartBadge();
+          showToast(`${items.length} ITEMS ADDED TO CART`);
+        } else if (action.type === 'add_to_pantry') {
+          // Add items to pantry
+          const items = action.items || [];
+          if (items.length > 0) {
+            addPantryItemsFromText(items.join(', '));
+            showToast(`${items.length} ITEMS ADDED TO PANTRY`);
+          }
         }
       } catch(e) { console.error('Action parse error:', e); }
     }
 
-    const a = document.createElement('div'); a.className='msg ai'; a.innerHTML=`<span class="msg-sender">FUEL AI</span>${reply}`; coachMessages.appendChild(a);
+    // Format reply: convert markdown bold, line breaks, and bullets
+    const formatted = reply
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n\n+/g, '</p><p>')
+      .replace(/\n/g, '<br>')
+      .replace(/^/, '<p>').replace(/$/, '</p>')
+      .replace(/<p>\s*[-•]\s*/g, '<p style="padding-left:12px;">· ');
+    const a = document.createElement('div'); a.className='msg ai'; a.innerHTML=`<span class="msg-sender">FUEL AI</span><div class="msg-body">${formatted}</div>`; coachMessages.appendChild(a);
     state.chatHistory.push({role:'assistant',content:reply}); saveState();
   } catch(e) { td.remove(); const er=document.createElement('div'); er.className='msg ai'; er.innerHTML='<span class="msg-sender">FUEL AI</span>Sorry, couldn\'t connect. Try again.'; coachMessages.appendChild(er); }
   coachMessages.scrollTop = coachMessages.scrollHeight;
@@ -3838,6 +5322,7 @@ function executeProfileUpdate(changes) {
   }
 
   localStorage.setItem('fuel_profile', JSON.stringify(profile));
+  schedulePush();
 
   if (goalsChanged) {
     renderDashboard();
@@ -3867,9 +5352,9 @@ const INGREDIENT_EMOJIS = {
   lemon:      '🍋', lime:    '🍋', banana:  '🍌', berry:   '🫐', mango:   '🥭',
   apple:      '🍎', grape:   '🍇', coconut: '🥥', orange:  '🍊',
   watermelon: '🍉', cherry:  '🍒', cherries:'🍒', peach:   '🍑', pear:    '🍐',
-  pineapple:  '🍍', strawberry:'🍓', blueberry:'🫐', raspberry:'🫐', blackberry:'🫐',
+  pineapple:  '🍍', strawberr:'🍓', blueberr:'🫐', raspberr:'🫐', blackberr:'🫐',
   kiwi:       '🥝', plum:    '🍑', melon:   '🍈', fig:     '🟤', date:    '🟤',
-  cranberry:  '🫐', pomegranate:'🔴', apricot:'🟠', nectarine:'🍑', grapefruit:'🍊',
+  cranberr:   '🫐', pomegranate:'🔴', apricot:'🟠', nectarine:'🍑', grapefruit:'🍊',
   // Dairy
   cheese:     '🧀', parmesan:'🧀', feta:    '🧀', yogurt:  '🥛', milk:    '🥛',
   butter:     '🧈', cream:   '🥛', mozzarella:'🧀', cheddar: '🧀', cottage: '🥛',
@@ -3928,11 +5413,9 @@ function ingredientEmoji(name, category) {
   let changed = false;
   for (const [key, item] of Object.entries(p)) {
     const correct = ingredientEmoji(key, item.category);
-    if (!item.emoji || item.emoji === '🥘' || item.emoji === '📦') {
-      if (correct !== item.emoji) {
-        item.emoji = correct;
-        changed = true;
-      }
+    if (correct !== '🥘' && correct !== item.emoji) {
+      item.emoji = correct;
+      changed = true;
     }
   }
   if (changed) savePantry(p);
@@ -4095,33 +5578,118 @@ try {
 function saveRecipeCache() { localStorage.setItem('fuel_recipe_cache', JSON.stringify(recipeCache)); }
 
 // ── Pantry (full inventory system) ──
-function getPantry() { try { return JSON.parse(localStorage.getItem('fuel_pantry2') || '{}'); } catch(e) { return {}; } }
-function savePantry(p) { localStorage.setItem('fuel_pantry2', JSON.stringify(p)); }
+function getPantry() { try { return JSON.parse(localStorage.getItem(getPantryKey()) || '{}'); } catch(e) { return {}; } }
+function savePantry(p) { localStorage.setItem(getPantryKey(), JSON.stringify(p)); schedulePush(); }
 function hasPantryItem(name) { return !!getPantry()[name.toLowerCase()]; }
 
 function togglePantryItem(name) {
   const p = getPantry();
-  const key = name.toLowerCase();
+  const key = name.toLowerCase().trim();
   if (p[key]) { delete p[key]; } else {
-    p[key] = { qty: null, unit: '', location: 'pantry', added: new Date().toISOString(), expires: null, emoji: ingredientEmoji(name), source: 'manual', name };
+    p[key] = { qty: null, unit: '', location: 'pantry', added: new Date().toISOString(), expires: null, emoji: ingredientEmoji(name), source: 'manual', name: titleCaseFood(name) };
   }
   savePantry(p);
 }
 
+function titleCaseFood(str) {
+  const lower = ['a','an','the','and','or','of','in','on','with','for','to','at'];
+  return str.trim().split(/\s+/).map((w, i) => {
+    const lw = w.toLowerCase();
+    if (i > 0 && lower.includes(lw)) return lw;
+    return lw.charAt(0).toUpperCase() + lw.slice(1);
+  }).join(' ');
+}
+
 function addPantryItem(name, data) {
   const p = getPantry();
-  const key = name.toLowerCase();
+  const key = name.toLowerCase().trim();
+  const displayName = titleCaseFood(name);
   const existing = p[key];
   const defaults = { qty: null, unit: '', location: 'pantry', added: new Date().toISOString(), expires: null, emoji: '', source: 'manual' };
   if (existing && existing.qty && data.qty) {
-    // Merge quantities if both known
     existing.qty += data.qty;
     existing.added = new Date().toISOString();
-    p[key] = { ...defaults, ...existing, ...data, qty: existing.qty };
+    p[key] = { ...defaults, ...existing, ...data, qty: existing.qty, name: displayName };
   } else {
-    p[key] = { ...defaults, ...data, name };
+    p[key] = { ...defaults, ...data, name: displayName };
   }
   savePantry(p);
+}
+
+// Fix all existing pantry items: title-case names
+function fixPantryNames() {
+  const p = getPantry();
+  let changed = false;
+  for (const [key, item] of Object.entries(p)) {
+    const fixed = titleCaseFood(item.name || key);
+    if (item.name !== fixed) {
+      item.name = fixed;
+      changed = true;
+    }
+  }
+  if (changed) savePantry(p);
+}
+
+// Fly emoji animation for pantry adds
+function flyToPantryLocation(emoji, srcCoords, targetLoc) {
+  const srcX = srcCoords.x;
+  const srcY = srcCoords.y;
+
+  // Target: bottom nav pantry button (always visible, always reliable)
+  const navBtns = document.querySelectorAll('.nav-item');
+  const targetEl = navBtns[1]; // pantry nav
+  const targetRect = targetEl.getBoundingClientRect();
+  const targetX = targetRect.left + targetRect.width / 2;
+  const targetY = targetRect.top + targetRect.height / 2;
+
+  // Create a container div at the root level with its own fixed positioning
+  // This avoids any stacking context issues from backdrop-filter/transforms
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;inset:0;z-index:99999;pointer-events:none;';
+  document.documentElement.appendChild(container);
+
+  const el = document.createElement('div');
+  el.style.cssText = `
+    position:absolute;
+    left:${srcX - 14}px;
+    top:${srcY - 14}px;
+    font-size:28px;
+    opacity:0;
+    transform:scale(0) rotate(-15deg);
+    pointer-events:none;
+    will-change:transform,opacity;
+    filter:drop-shadow(0 2px 8px rgba(0,0,0,.4));
+    z-index:99999;
+  `;
+  el.textContent = emoji;
+  container.appendChild(el);
+
+  // Phase 1: POP — spring out of the input box, 450ms
+  requestAnimationFrame(() => {
+    el.style.transition = 'all 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    el.style.transform = 'scale(1.4) rotate(0deg)';
+    el.style.opacity = '1';
+
+    // Phase 2: HOLD — pause at full size, 600ms
+    setTimeout(() => {
+
+      // Phase 3: FLY — arc to destination, 900ms
+      el.style.transition = 'all 0.9s cubic-bezier(0.4, 0, 0.2, 1)';
+      el.style.left = (targetX - 14) + 'px';
+      el.style.top = (targetY - 14) + 'px';
+      el.style.transform = 'scale(0.5) rotate(20deg)';
+      el.style.opacity = '0.7';
+
+      // Phase 4: ABSORB — vanish into target, 350ms
+      setTimeout(() => {
+        el.style.transition = 'all 0.35s cubic-bezier(0.4, 0, 1, 1)';
+        el.style.transform = 'scale(0) rotate(40deg)';
+        el.style.opacity = '0';
+        setTimeout(() => container.remove(), 350);
+      }, 850);
+
+    }, 600);
+  });
 }
 
 function classifyLocally(name) {
@@ -4142,9 +5710,22 @@ function classifyLocally(name) {
   return null;
 }
 
-async function addPantryItemsFromText(text) {
+async function addPantryItemsFromText(text, srcCoords) {
   const items = text.split(/[,\n]+|(?:\s+and\s+)/i).map(s => s.trim()).filter(Boolean);
   const needsClassification = [];
+
+  // If no pre-captured coords, grab from input now
+  if (!srcCoords) {
+    const sourceEl = document.getElementById('pantryAddInput') || document.getElementById('pantryInput');
+    if (sourceEl) {
+      const r = sourceEl.getBoundingClientRect();
+      srcCoords = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    } else {
+      srcCoords = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    }
+  }
+
+  let flyDelay = 0;
 
   items.forEach(item => {
     if (hasPantryItem(item)) return;
@@ -4152,15 +5733,21 @@ async function addPantryItemsFromText(text) {
     const EXPIRY = { protein: 4, vegetable: 7, fruit: 7, dairy: 10, grain: 180, healthy_fat: 90, legume: 365 };
     const LOC = { protein: 'fridge', vegetable: 'fridge', fruit: 'fridge', dairy: 'fridge', grain: 'pantry', healthy_fat: 'pantry', legume: 'pantry' };
     const expDays = (foodGroup && EXPIRY[foodGroup]) || 7;
-    const loc = (foodGroup && LOC[foodGroup]) || 'fridge';
+    const isFrozen = /frozen|ice cream|popsicle|gelato|sorbet/i.test(item);
+    const loc = isFrozen ? 'freezer' : (foodGroup && LOC[foodGroup]) || 'fridge';
+    const emoji = ingredientEmoji(item);
 
     addPantryItem(item, {
       qty: null, unit: '', location: loc, source: 'voice',
-      emoji: ingredientEmoji(item),
+      emoji,
       foodGroup: foodGroup || 'unknown',
       added: new Date().toISOString(),
       expires: new Date(Date.now() + expDays * 86400000).toISOString(),
     });
+
+    // Fly animation — stagger each item
+    setTimeout(() => flyToPantryLocation(emoji || '🥘', srcCoords, loc), flyDelay);
+    flyDelay += 250;
 
     if (!foodGroup) needsClassification.push(item);
   });
@@ -4181,9 +5768,12 @@ async function addPantryItemsFromText(text) {
           if (p[key]) {
             p[key].foodGroup = group;
             p[key].emoji = ingredientEmoji(name, group);
-            // Update location based on classification
-            const LOC = { protein:'fridge', vegetable:'fridge', fruit:'fridge', dairy:'fridge', grain:'pantry', healthy_fat:'pantry', legume:'pantry', condiment:'pantry', herb:'fridge', beverage:'fridge' };
-            if (LOC[group]) p[key].location = LOC[group];
+            // Only update location if user hasn't manually moved it
+            if (!p[key].userMoved) {
+              const LOC = { protein:'fridge', vegetable:'fridge', fruit:'fridge', dairy:'fridge', grain:'pantry', healthy_fat:'pantry', legume:'pantry', condiment:'pantry', herb:'fridge', beverage:'fridge', frozen:'freezer' };
+              if (/frozen|ice cream|popsicle|gelato|sorbet/i.test(name)) p[key].location = 'freezer';
+              else if (LOC[group]) p[key].location = LOC[group];
+            }
           }
         }
         savePantry(p);
@@ -4652,6 +6242,39 @@ function renderPantryPage() {
     </button>
   </div>`;
 
+  // Pending invites banner
+  if (_cachedShareStatus.pendingInvites && _cachedShareStatus.pendingInvites.length > 0) {
+    const inv = _cachedShareStatus.pendingInvites[0];
+    html += `<div style="padding:14px;background:var(--gold-dim);border:1px solid var(--gold-border);margin-bottom:16px;">
+      <div style="font-size:9px;font-weight:500;letter-spacing:.25em;color:var(--gold);margin-bottom:8px;">PANTRY INVITE</div>
+      <div style="font-size:13px;color:var(--ink);margin-bottom:12px;">${inv.inviter_name} wants to share their pantry with you.</div>
+      <div style="display:flex;gap:8px;">
+        <button class="auth-submit" style="flex:1;padding:10px;font-size:10px;" onclick="acceptInvite('${inv.id}')">ACCEPT</button>
+        <button class="profile-action" style="flex:1;margin:0;padding:10px;font-size:10px;" onclick="declineInvite('${inv.id}')">DECLINE</button>
+      </div>
+    </div>`;
+  }
+
+  // Shared pantry status or share button
+  if (_cachedShareStatus.shared) {
+    const memberNames = _cachedShareStatus.members
+      .map(m => m.user_profiles ? (m.user_profiles.display_name || m.user_profiles.email.split('@')[0]) : '?')
+      .join(', ');
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--panel);border:1px solid var(--rule);margin-bottom:16px;">
+      <svg viewBox="0 0 24 24" width="14" height="14" stroke="var(--gold)" fill="none" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <div style="flex:1;">
+        <div style="font-size:9px;font-weight:500;letter-spacing:.2em;color:var(--gold);">SHARED PANTRY</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${memberNames}</div>
+      </div>
+      <button class="profile-action" style="margin:0;padding:6px 12px;font-size:9px;" onclick="openShareDialog()">MANAGE</button>
+    </div>`;
+  } else {
+    html += `<button class="profile-action" style="margin:0 0 16px;padding:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="openShareDialog()">
+      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="1.5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+      SHARE PANTRY
+    </button>`;
+  }
+
   // Add manually
   html += `<div style="display:flex;gap:8px;margin-bottom:20px;">
     <input class="search-input" id="pantryAddInput" type="text" placeholder="Add items: chicken, rice, butter..." autocomplete="off" style="flex:1;font-size:13px;padding:10px 12px;"/>
@@ -4711,8 +6334,11 @@ function renderPantryPage() {
     html += `</div>`;
   }
 
-  // Summary
-  html += `<div style="font-size:10px;color:var(--muted);letter-spacing:.1em;margin-bottom:12px;">${totalItems} item${totalItems!==1?'s':''} tracked</div>`;
+  // Summary + Empty button
+  html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div style="font-size:10px;color:var(--muted);letter-spacing:.1em;">${totalItems} item${totalItems!==1?'s':''} tracked</div>
+    ${totalItems > 0 ? '<button class="pantry-empty-btn" onclick="clearPantry()">Empty Pantry</button>' : ''}
+  </div>`;
 
   // Inventory by location — with drag-and-drop
   const locs = ['fridge','freezer','pantry'];
@@ -4732,14 +6358,19 @@ function renderPantryPage() {
         : '';
       const qtyStr = item.qty ? `${item.qty} ${item.unit||''}`.trim() : '';
       const esc = item.key.replace(/'/g,"\\'");
-      html += `<div class="profile-row pantry-item-draggable" data-pantry-key="${item.key}" style="padding:10px 0;" ondblclick="removePantryItem('${esc}')">
-        <div class="profile-row-label" style="display:flex;align-items:center;gap:8px;font-size:13px;">
-          <span style="font-size:16px;">${item.emoji||'🥘'}</span>
-          ${item.name}${expBadge}
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:11px;color:var(--muted);">${qtyStr || ''}</span>
-          <span class="pantry-loc-badge" onclick="event.stopPropagation();cyclePantryLoc('${esc}')">${loc.toUpperCase().slice(0,3)}</span>
+      html += `<div class="pantry-swipe-wrap">
+        <div class="pantry-swipe-delete" onclick="removePantryItemDirect('${esc}')">REMOVE</div>
+        <div class="pantry-swipe-inner">
+          <div class="profile-row pantry-item-draggable" data-pantry-key="${item.key}" style="padding:10px 0;">
+            <div class="profile-row-label" style="display:flex;align-items:center;gap:8px;font-size:13px;">
+              <span style="font-size:16px;">${item.emoji||'🥘'}</span>
+              ${item.name}${expBadge}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:11px;color:var(--muted);">${qtyStr || ''}</span>
+              <span class="pantry-loc-badge" onclick="event.stopPropagation();cyclePantryLoc('${esc}')">${loc.toUpperCase().slice(0,3)}</span>
+            </div>
+          </div>
         </div>
       </div>`;
     });
@@ -4755,16 +6386,37 @@ function renderPantryPage() {
   }
 
   body.innerHTML = html;
+  initPantrySwipe();
 }
 
 function addPantryManual() {
   const input = document.getElementById('pantryAddInput');
   const text = input.value.trim();
   if (!text) return;
-  addPantryItemsFromText(text);
+
+  // Capture input position BEFORE anything changes
+  const inputRect = input.getBoundingClientRect();
+  const srcCoords = { x: inputRect.left + inputRect.width / 2, y: inputRect.top + inputRect.height / 2 };
+
+  // Lock viewport height so keyboard dismiss doesn't cause layout shift
+  const vh = window.innerHeight;
+  document.body.style.minHeight = vh + 'px';
+  document.body.style.overflow = 'hidden';
+
+  // Clear input but keep focus so keyboard stays up briefly
   input.value = '';
-  renderPantryPage();
-  showToast('ADDED TO PANTRY');
+  input.focus();
+
+  addPantryItemsFromText(text, srcCoords);
+
+  // After pop phase completes, dismiss keyboard and unlock layout
+  setTimeout(() => {
+    input.blur();
+    document.body.style.minHeight = '';
+    document.body.style.overflow = '';
+    renderPantryPage();
+    showToast('ADDED TO PANTRY');
+  }, 800);
 }
 
 function cyclePantryLoc(key) {
@@ -4774,6 +6426,7 @@ function cyclePantryLoc(key) {
   const cur = p[key].location || 'pantry';
   const next = order[(order.indexOf(cur) + 1) % order.length];
   p[key].location = next;
+  p[key].userMoved = true;
   savePantry(p);
   renderPantryPage();
   showToast(`MOVED TO ${next.toUpperCase()}`);
@@ -4854,6 +6507,7 @@ function initPantryDrag() {
         const p = getPantry();
         if (p[key] && p[key].location !== targetLoc) {
           p[key].location = targetLoc;
+          p[key].userMoved = true;
           savePantry(p);
           showToast(`MOVED TO ${targetLoc.toUpperCase()}`);
         }
@@ -5027,6 +6681,49 @@ function renderWeekly() {
   }, 100);
 }
 
+function renderDesktopWeekly() {
+  const el = document.getElementById('desktopWeekly');
+  if (!el || window.innerWidth < 900) return;
+  const days = loadAllDays();
+  const today = new Date();
+  const labels = ['M','T','W','T','F','S','S'];
+  const week = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const data = days[key] || { meals: [], water: 0 };
+    const cal = data.meals.reduce((s,m) => s+(m.calories||0), 0);
+    const prot = data.meals.reduce((s,m) => s+(m.protein||0), 0);
+    week.push({ cal, prot, label: labels[6-i], isToday: i===0, score: data.score||null, n: data.meals.length });
+  }
+  const active = week.filter(d => d.n > 0);
+  const avgCal = active.length ? Math.round(active.reduce((s,d) => s+d.cal, 0)/active.length) : 0;
+  const avgProt = active.length ? Math.round(active.reduce((s,d) => s+d.prot, 0)/active.length) : 0;
+  const avgScore = active.filter(d=>d.score).length ? Math.round(active.filter(d=>d.score).reduce((s,d)=>s+d.score,0)/active.filter(d=>d.score).length) : null;
+  const maxCal = Math.max(GOALS.calories, ...week.map(d=>d.cal));
+  const calDiff = avgCal - GOALS.calories;
+  el.innerHTML = `
+    <div class="ds-week-header">
+      <div class="ds-week-title">THIS WEEK</div>
+      <div class="ds-week-avg">avg ${avgCal.toLocaleString()}</div>
+    </div>
+    <div class="ds-week-bars">
+      ${week.map(d => {
+        const h = maxCal>0 ? Math.max(2, (d.cal/maxCal)*50) : 2;
+        const cls = d.isToday?' today':(d.cal>GOALS.calories?' over':'');
+        return `<div class="ds-week-col">
+          <div class="ds-week-bar${cls}" style="height:${h}px"></div>
+          <div class="ds-week-day${d.isToday?' today':''}">${d.label}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="ds-week-stats">
+      <div class="ds-week-stat"><div class="ds-week-stat-val">${avgProt}</div><div class="ds-week-stat-label">PROTEIN AVG</div></div>
+      ${avgScore!==null?`<div class="ds-week-stat"><div class="ds-week-stat-val">${avgScore}</div><div class="ds-week-stat-label">SCORE AVG</div></div>`:''}
+      <div class="ds-week-stat"><div class="ds-week-stat-val">${calDiff>0?'+':''}${calDiff}</div><div class="ds-week-stat-label">VS GOAL</div></div>
+    </div>`;
+}
+
 // ── PROFILE ──
 function openProfile() {
   closeAllPanels(); setActiveNav(4);
@@ -5073,8 +6770,9 @@ function renderProfile() {
     <div class="profile-section">
       <div class="profile-section-label">ACTIONS</div>
       <button class="profile-action" onclick="openWeekly(); document.getElementById('profileOverlay').classList.remove('open');">VIEW WEEKLY TRENDS</button>
-      <button class="profile-action" onclick="if(confirm('Re-run onboarding? This will recalculate your targets.')){localStorage.removeItem('fuel_profile');location.reload();}">RE-RUN ONBOARDING</button>
+      <button class="profile-action" onclick="if(confirm('Re-run onboarding? This will recalculate your targets.')){localStorage.removeItem('fuel_profile');schedulePush();location.reload();}">RE-RUN ONBOARDING</button>
       <button class="profile-action danger" onclick="if(confirm('Clear all data? This cannot be undone.')){localStorage.clear();sessionStorage.clear();location.reload();}">CLEAR ALL DATA</button>
+      <button class="profile-action" onclick="handleSignOut()">SIGN OUT</button>
     </div>
   `;
 }
@@ -5178,9 +6876,30 @@ async function searchAPIs(query) {
   const body = document.getElementById('searchBody');
   const results = [];
 
-  // Local results first
+  // Tier 1: FUEL verified database (fastest, most accurate)
+  try {
+    const lookupResp = await fetch('/api/lookup', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    if (lookupResp.ok) {
+      const item = await lookupResp.json();
+      if (item.name && !item.error) {
+        results.push({
+          name: item.name, emoji: item.emoji || '🥘',
+          cal: item.calories, protein: item.protein,
+          carbs: item.carbs, fat: item.fat, fiber: item.fiber || 0,
+          serving: item.serving, source: item.source === 'verified' ? 'fuel' : 'fuel_ai',
+        });
+      }
+    }
+  } catch(e) {}
+
+  // Local hardcoded DB
   FOOD_DB.filter(f => f.n.toLowerCase().includes(query.toLowerCase())).forEach(f => {
-    results.push({ name: f.n, emoji: f.e, cal: f.cal, protein: f.p, carbs: f.c, fat: f.f, serving: f.s, source: 'local' });
+    if (!results.some(r => r.name.toLowerCase() === f.n.toLowerCase())) {
+      results.push({ name: f.n, emoji: f.e, cal: f.cal, protein: f.p, carbs: f.c, fat: f.f, serving: f.s, source: 'local' });
+    }
   });
 
   // USDA + OpenFoodFacts in parallel
@@ -5255,7 +6974,9 @@ function renderSearchResults(results, query) {
   window._searchResults = results;
 
   body.innerHTML = '<div class="search-results">' + results.map((f, i) => {
-    const srcLabel = f.source === 'usda' ? '<span style="color:var(--green);font-size:8px;letter-spacing:.1em;margin-left:4px;">USDA</span>'
+    const srcLabel = f.source === 'fuel' ? '<span style="color:var(--gold);font-size:8px;letter-spacing:.1em;margin-left:4px;">FUEL</span>'
+      : f.source === 'fuel_ai' ? '<span style="color:var(--gold);font-size:8px;letter-spacing:.1em;margin-left:4px;opacity:.6;">AI</span>'
+      : f.source === 'usda' ? '<span style="color:var(--green);font-size:8px;letter-spacing:.1em;margin-left:4px;">USDA</span>'
       : f.source === 'off' ? '<span style="color:var(--blue);font-size:8px;letter-spacing:.1em;margin-left:4px;">OFF</span>'
       : '';
     const brandLabel = f.brand ? `<span style="color:var(--muted);"> · ${f.brand}</span>` : '';
@@ -5273,13 +6994,15 @@ function renderSearchResults(results, query) {
 function addSearchResultNew(idx) {
   const f = window._searchResults[idx];
   if (!f) return;
-  state.meals.push({
+  const searchMeal = {
     name: f.name + (f.brand ? ` (${f.brand})` : ''),
     calories: f.cal, protein: f.protein, carbs: f.carbs, fat: f.fat,
     description: f.serving,
     tags: [], category: 'savory',
     time: new Date().toISOString(),
-  });
+  };
+  state.meals.push(searchMeal);
+  applyBeverageHydration(searchMeal);
   saveState(); renderLog(); renderDashboard(); pulseRing();
   showToast('ADDED TO LOG');
   document.getElementById('searchOverlay').classList.remove('open');
@@ -5290,6 +7013,7 @@ function addSearchResultNew(idx) {
 // ═══════════════════════════════════════
 // Receipt button is now in the pantry page (rendered dynamically)
 
+// Receipt input listener — bound in initAppBindings
 document.getElementById('receiptInput').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -5476,14 +7200,16 @@ async function handleBarcodeFound(code) {
 }
 
 function barcodeAddToLog(product) {
-  state.meals.push({
+  const barcodeMeal = {
     name: product.name + (product.brand ? ` (${product.brand})` : ''),
     calories: product.calories, protein: product.protein,
     carbs: product.carbs, fat: product.fat,
     description: `Per ${product.servingSize}`,
     tags: [], category: 'savory',
     time: new Date().toISOString(),
-  });
+  };
+  state.meals.push(barcodeMeal);
+  applyBeverageHydration(barcodeMeal);
   saveState(); renderLog(); renderDashboard(); pulseRing();
   stopBarcodeScanner();
   document.getElementById('searchOverlay').classList.remove('open');
@@ -5642,12 +7368,434 @@ function calculatePantryScore() {
 
 function removePantryItem(key) {
   if (!confirm(`Remove ${key} from pantry?`)) return;
+  removePantryItemDirect(key);
+}
+
+function removePantryItemDirect(key) {
   const p = getPantry();
   delete p[key];
   savePantry(p);
-  // Re-render whichever view is open
   if (document.getElementById('pantryPageOverlay').classList.contains('open')) renderPantryPage();
   else if (document.getElementById('profileOverlay').classList.contains('open')) renderProfile();
+}
+
+function clearPantry() {
+  const count = Object.keys(getPantry()).length;
+  if (!confirm(`Remove all ${count} items from your pantry?`)) return;
+  savePantry({});
+  renderPantryPage();
+  showToast('PANTRY CLEARED');
+}
+
+// Swipe-to-remove on pantry items
+function initPantrySwipe() {
+  document.querySelectorAll('.pantry-swipe-wrap').forEach(wrap => {
+    const inner = wrap.querySelector('.pantry-swipe-inner');
+    let sx = 0, sy = 0, dx = 0, tracking = false, direction = null;
+
+    wrap.addEventListener('touchstart', e => {
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+      dx = 0;
+      tracking = true;
+      direction = null;
+    }, { passive: true });
+
+    wrap.addEventListener('touchmove', e => {
+      if (!tracking) return;
+      const moveX = e.touches[0].clientX - sx;
+      const moveY = e.touches[0].clientY - sy;
+
+      // Determine direction on first significant movement
+      if (!direction) {
+        if (Math.abs(moveX) < 5 && Math.abs(moveY) < 5) return;
+        direction = Math.abs(moveX) > Math.abs(moveY) ? 'h' : 'v';
+        if (direction === 'h') {
+          inner.style.transition = 'none';
+        }
+      }
+
+      if (direction !== 'h') return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      dx = moveX;
+      if (dx > 0) dx = 0;
+      if (dx < -100) dx = -100;
+      inner.style.transform = `translateX(${dx}px)`;
+    }, { passive: false });
+
+    wrap.addEventListener('touchend', () => {
+      if (direction === 'h') {
+        inner.style.transition = 'transform .2s ease';
+        if (dx < -50) {
+          inner.style.transform = 'translateX(-80px)';
+        } else {
+          inner.style.transform = 'translateX(0)';
+        }
+      }
+      tracking = false;
+      direction = null;
+    });
+
+    wrap.addEventListener('touchcancel', () => {
+      tracking = false;
+      direction = null;
+      inner.style.transition = 'transform .2s ease';
+      inner.style.transform = 'translateX(0)';
+    });
+
+    // Reset on tap
+    inner.addEventListener('click', () => {
+      if (parseFloat(inner.style.transform?.match(/-?\d+/)?.[0] || 0) < 0) {
+        inner.style.transform = 'translateX(0)';
+      }
+    });
+  });
+}
+
+// ═══════════════════════════════════════
+// SHARED PANTRY
+// ═══════════════════════════════════════
+// (declarations moved to top of script to avoid TDZ)
+
+async function ensureUserProfile() {
+  if (!currentUser || !sb) return;
+  await sb.from('user_profiles').upsert({
+    id: currentUser.id,
+    email: currentUser.email,
+    display_name: getProfileName() || currentUser.email.split('@')[0],
+  }, { onConflict: 'id' });
+}
+
+async function resolveSharedPantryOwner() {
+  if (!currentUser || !sb) { _sharedPantryResolved = true; return null; }
+  // Am I a member of a group?
+  const { data: membership } = await sb
+    .from('pantry_members')
+    .select('group_id, role, pantry_groups(owner_id)')
+    .eq('user_id', currentUser.id)
+    .eq('status', 'accepted')
+    .limit(1)
+    .maybeSingle();
+
+  if (membership && membership.pantry_groups) {
+    _sharedPantryOwnerId = membership.pantry_groups.owner_id;
+  } else {
+    _sharedPantryOwnerId = null;
+  }
+  _sharedPantryResolved = true;
+  return _sharedPantryOwnerId;
+}
+
+function getEffectivePantryUserId() {
+  return _sharedPantryOwnerId || (currentUser ? currentUser.id : null);
+}
+
+function invalidateSharedPantryCache() {
+  _sharedPantryResolved = false;
+  _sharedPantryOwnerId = null;
+}
+
+function getPantryKey() {
+  const ownerId = getEffectivePantryUserId();
+  return ownerId ? 'fuel_pantry2_' + ownerId : 'fuel_pantry2';
+}
+
+async function refreshShareStatus() {
+  if (!currentUser || !sb) return;
+  try {
+    // Check if I own a group
+    const { data: ownedGroup } = await sb
+      .from('pantry_groups')
+      .select('id')
+      .eq('owner_id', currentUser.id)
+      .maybeSingle();
+
+    if (ownedGroup) {
+      const { data: members } = await sb
+        .from('pantry_members')
+        .select('user_id, role, status, user_profiles(email, display_name)')
+        .eq('group_id', ownedGroup.id)
+        .eq('status', 'accepted');
+      _cachedShareStatus.shared = true;
+      _cachedShareStatus.members = members || [];
+      _cachedShareStatus.groupId = ownedGroup.id;
+      _cachedShareStatus.isOwner = true;
+    } else if (_sharedPantryOwnerId && _sharedPantryOwnerId !== currentUser.id) {
+      // I'm a member of someone else's group
+      const { data: membership } = await sb
+        .from('pantry_members')
+        .select('group_id, pantry_groups(owner_id, name)')
+        .eq('user_id', currentUser.id)
+        .eq('status', 'accepted')
+        .maybeSingle();
+      if (membership) {
+        const { data: members } = await sb
+          .from('pantry_members')
+          .select('user_id, role, status, user_profiles(email, display_name)')
+          .eq('group_id', membership.group_id)
+          .eq('status', 'accepted');
+        _cachedShareStatus.shared = true;
+        _cachedShareStatus.members = members || [];
+        _cachedShareStatus.groupId = membership.group_id;
+        _cachedShareStatus.isOwner = false;
+      }
+    } else {
+      _cachedShareStatus.shared = false;
+      _cachedShareStatus.members = [];
+      _cachedShareStatus.groupId = null;
+      _cachedShareStatus.isOwner = false;
+    }
+
+    // Check pending invites to me
+    const { data: invites } = await sb
+      .from('pantry_members')
+      .select('id, invited_at, invited_by, pantry_groups(owner_id)')
+      .eq('user_id', currentUser.id)
+      .eq('status', 'pending');
+
+    // Look up inviter names
+    if (invites && invites.length > 0) {
+      for (const inv of invites) {
+        const { data: inviter } = await sb.from('user_profiles').select('email, display_name').eq('id', inv.invited_by).maybeSingle();
+        inv.inviter_name = inviter ? (inviter.display_name || inviter.email.split('@')[0]) : 'Someone';
+      }
+    }
+    _cachedShareStatus.pendingInvites = invites || [];
+
+    // Update badge
+    const badge = document.getElementById('inviteBadge');
+    if (badge) badge.style.display = (_cachedShareStatus.pendingInvites.length > 0) ? 'block' : 'none';
+  } catch (e) { console.warn('[FUEL share] refreshShareStatus error:', e); }
+}
+
+async function inviteToSharedPantry(email) {
+  if (!currentUser || !sb) return { error: 'Not logged in' };
+  email = email.toLowerCase().trim();
+  if (!email) return { error: 'Enter an email address' };
+
+  // Look up user
+  const { data: invitee } = await sb.from('user_profiles').select('id, email').eq('email', email).maybeSingle();
+  if (!invitee) return { error: 'User not found. They need to create a FUEL account first.' };
+  if (invitee.id === currentUser.id) return { error: "That's your own email." };
+
+  // Create or get group
+  let { data: group } = await sb.from('pantry_groups').select('id').eq('owner_id', currentUser.id).maybeSingle();
+  if (!group) {
+    const { data: newGroup, error: gErr } = await sb.from('pantry_groups').insert({ owner_id: currentUser.id }).select('id').single();
+    if (gErr) return { error: gErr.message };
+    group = newGroup;
+    // Add owner as member
+    _ignoreNextInviteEvent = true;
+    await sb.from('pantry_members').insert({
+      group_id: group.id, user_id: currentUser.id, role: 'owner',
+      status: 'accepted', invited_by: currentUser.id, accepted_at: new Date().toISOString()
+    });
+  }
+
+  // Check existing
+  const { data: existing } = await sb.from('pantry_members').select('id, status').eq('group_id', group.id).eq('user_id', invitee.id).maybeSingle();
+  if (existing) {
+    if (existing.status === 'accepted') return { error: 'Already sharing with this person.' };
+    if (existing.status === 'pending') return { error: 'Invite already sent.' };
+    // If declined, re-invite
+    await sb.from('pantry_members').update({ status: 'pending', invited_at: new Date().toISOString() }).eq('id', existing.id);
+    return { success: true };
+  }
+
+  const { error } = await sb.from('pantry_members').insert({
+    group_id: group.id, user_id: invitee.id, role: 'member',
+    status: 'pending', invited_by: currentUser.id
+  });
+  if (error) return { error: error.message };
+
+  invalidateSharedPantryCache();
+  await resolveSharedPantryOwner();
+  await refreshShareStatus();
+  subscribeToPantryChanges();
+  return { success: true };
+}
+
+async function acceptInvite(membershipId) {
+  if (!currentUser || !sb) return;
+  // Back up personal pantry
+  const myPantry = getPantry();
+  localStorage.setItem('fuel_pantry2_backup_' + currentUser.id, JSON.stringify(myPantry));
+
+  await sb.from('pantry_members').update({ status: 'accepted', accepted_at: new Date().toISOString() }).eq('id', membershipId).eq('user_id', currentUser.id);
+
+  invalidateSharedPantryCache();
+  await resolveSharedPantryOwner();
+
+  // Pull shared pantry
+  const effectiveId = getEffectivePantryUserId();
+  const { data: sharedRow } = await sb.from('pantry').select('items').eq('user_id', effectiveId).maybeSingle();
+  let sharedPantry = (sharedRow && sharedRow.items) ? sharedRow.items : {};
+
+  // Merge personal items in
+  for (const [key, item] of Object.entries(myPantry)) {
+    if (!sharedPantry[key]) sharedPantry[key] = item;
+  }
+  localStorage.setItem(getPantryKey(), JSON.stringify(sharedPantry));
+
+  // Push merged pantry
+  await sb.from('pantry').upsert({ user_id: effectiveId, items: sharedPantry }, { onConflict: 'user_id' });
+
+  await refreshShareStatus();
+  subscribeToPantryChanges();
+  renderPantryPage();
+  showToast('PANTRY SHARED');
+}
+
+async function declineInvite(membershipId) {
+  if (!sb) return;
+  await sb.from('pantry_members').update({ status: 'declined' }).eq('id', membershipId).eq('user_id', currentUser.id);
+  await refreshShareStatus();
+  renderPantryPage();
+  showToast('INVITE DECLINED');
+}
+
+async function leaveSharedPantry() {
+  if (!currentUser || !sb) return;
+  if (!confirm('Leave the shared pantry? You\'ll keep a copy of the current items.')) return;
+
+  const currentItems = getPantry();
+  const isOwner = _cachedShareStatus.isOwner;
+
+  if (isOwner && _cachedShareStatus.groupId) {
+    await sb.from('pantry_groups').delete().eq('id', _cachedShareStatus.groupId);
+  } else {
+    await sb.from('pantry_members').delete().eq('user_id', currentUser.id).eq('status', 'accepted');
+  }
+
+  invalidateSharedPantryCache();
+  await resolveSharedPantryOwner();
+
+  // Save current items as personal pantry
+  localStorage.setItem(getPantryKey(), JSON.stringify(currentItems));
+  await sb.from('pantry').upsert({ user_id: currentUser.id, items: currentItems }, { onConflict: 'user_id' });
+
+  if (pantrySubscription) { pantrySubscription.unsubscribe(); pantrySubscription = null; }
+  await refreshShareStatus();
+  renderPantryPage();
+  showToast('LEFT SHARED PANTRY');
+}
+
+function subscribeToPantryChanges() {
+  if (!sb || !currentUser) return;
+  if (pantrySubscription) pantrySubscription.unsubscribe();
+  const effectiveId = getEffectivePantryUserId();
+  if (!effectiveId) return;
+
+  pantrySubscription = sb
+    .channel('pantry-sync-' + effectiveId)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pantry', filter: 'user_id=eq.' + effectiveId }, (payload) => {
+      if (payload.new && payload.new.items) {
+        localStorage.setItem(getPantryKey(), JSON.stringify(payload.new.items));
+        if (document.getElementById('pantryPageOverlay').classList.contains('open')) renderPantryPage();
+      }
+    })
+    .subscribe();
+}
+
+let _ignoreNextInviteEvent = false;
+function subscribeToInvites() {
+  if (!sb || !currentUser) return;
+  if (inviteSubscription) inviteSubscription.unsubscribe();
+
+  inviteSubscription = sb
+    .channel('invite-watch-' + currentUser.id)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pantry_members', filter: 'user_id=eq.' + currentUser.id }, (payload) => {
+      // Ignore events we triggered ourselves (owner adding self as member)
+      if (_ignoreNextInviteEvent) { _ignoreNextInviteEvent = false; return; }
+      if (payload.new && payload.new.invited_by === currentUser.id) return;
+      refreshShareStatus().then(() => {
+        if (document.getElementById('pantryPageOverlay').classList.contains('open')) renderPantryPage();
+      });
+    })
+    .subscribe();
+}
+
+function openShareDialog() {
+  const body = document.getElementById('shareDialogBody');
+  document.getElementById('shareDialogTitle').textContent = _cachedShareStatus.shared ? 'MANAGE SHARING' : 'SHARE PANTRY';
+
+  let html = '';
+
+  if (_cachedShareStatus.shared) {
+    // Show members
+    html += '<div style="font-size:9px;font-weight:500;letter-spacing:.3em;color:var(--gold);margin-bottom:12px;">MEMBERS</div>';
+    _cachedShareStatus.members.forEach(m => {
+      const name = m.user_profiles ? (m.user_profiles.display_name || m.user_profiles.email.split('@')[0]) : 'Unknown';
+      const email = m.user_profiles ? m.user_profiles.email : '';
+      const isMe = m.user_id === currentUser.id;
+      const badge = m.role === 'owner' ? '<span style="font-size:8px;letter-spacing:.1em;color:var(--gold);margin-left:6px;">OWNER</span>' : '';
+      const youBadge = isMe ? '<span style="font-size:8px;letter-spacing:.1em;color:var(--muted);margin-left:6px;">YOU</span>' : '';
+      html += `<div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--rule);">
+        <div style="flex:1;">
+          <div style="font-size:14px;color:var(--ink);">${name}${badge}${youBadge}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${email}</div>
+        </div>
+      </div>`;
+    });
+
+    // Invite more
+    html += `<div style="margin-top:20px;">
+      <div style="font-size:9px;font-weight:500;letter-spacing:.3em;color:var(--ink-3);margin-bottom:8px;">INVITE ANOTHER</div>
+      <div style="display:flex;gap:8px;">
+        <input class="auth-input" id="shareEmailInput" type="email" placeholder="Email address" style="flex:1;" />
+        <button class="auth-submit" style="width:auto;padding:10px 16px;" onclick="sendShareInvite()">INVITE</button>
+      </div>
+      <div class="auth-error" id="shareError" style="margin-top:8px;"></div>
+    </div>`;
+
+    // Leave button
+    html += `<button class="pantry-empty-btn" style="width:100%;margin-top:24px;padding:12px;" onclick="leaveSharedPantry();closeShareDialog();">
+      ${_cachedShareStatus.isOwner ? 'DISSOLVE SHARED PANTRY' : 'LEAVE SHARED PANTRY'}
+    </button>`;
+  } else {
+    // Not sharing yet — invite form
+    html += `<div style="font-family:var(--serif);font-style:italic;font-size:18px;color:var(--ink);margin-bottom:8px;">Share your pantry</div>
+      <div style="font-size:12px;color:var(--ink-3);line-height:1.6;margin-bottom:20px;">
+        Invite someone to share your pantry. You'll both see the same items — when one person adds or removes something, the other sees it instantly.
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input class="auth-input" id="shareEmailInput" type="email" placeholder="Their email address" style="flex:1;" />
+        <button class="auth-submit" style="width:auto;padding:10px 16px;" onclick="sendShareInvite()">INVITE</button>
+      </div>
+      <div class="auth-error" id="shareError" style="margin-top:8px;"></div>`;
+  }
+
+  body.innerHTML = html;
+  document.getElementById('shareDialog').classList.add('open');
+}
+
+function closeShareDialog() {
+  document.getElementById('shareDialog').classList.remove('open');
+}
+
+let _sendingInvite = false;
+async function sendShareInvite() {
+  if (_sendingInvite) return;
+  const input = document.getElementById('shareEmailInput');
+  const errEl = document.getElementById('shareError');
+  errEl.textContent = '';
+  errEl.style.color = '';
+  const email = input.value.trim();
+  if (!email) { errEl.textContent = 'Enter an email address'; return; }
+
+  _sendingInvite = true;
+  const result = await inviteToSharedPantry(email);
+  _sendingInvite = false;
+  if (result.error) {
+    errEl.textContent = result.error;
+  } else {
+    errEl.style.color = 'var(--green)';
+    errEl.textContent = 'Invite sent!';
+    input.value = '';
+    setTimeout(() => { closeShareDialog(); renderPantryPage(); }, 1500);
+  }
 }
 
 // ═══════════════════════════════════════
@@ -5840,7 +7988,10 @@ function calculateTargets() {
   const carbs = Math.round((tdee * carbsPct) / 4);
   const fat = Math.round((tdee * fatPct) / 9);
 
-  obData.targets = { calories: tdee, protein, carbs, fat };
+  // Fiber: 14g per 1000 cal is the standard recommendation
+  const fiber = Math.round(tdee / 1000 * 14);
+
+  obData.targets = { calories: tdee, protein, carbs, fat, fiber };
 }
 
 function animateReveal() {
@@ -5877,6 +8028,7 @@ function finishOnboarding() {
     createdAt: new Date().toISOString(),
   };
   localStorage.setItem('fuel_profile', JSON.stringify(profile));
+  schedulePush();
 
   // Apply targets
   applyProfile(profile);
@@ -5896,6 +8048,7 @@ function applyProfile(profile) {
     GOALS.protein = profile.targets.protein;
     GOALS.carbs = profile.targets.carbs;
     GOALS.fat = profile.targets.fat;
+    if (profile.targets.fiber) GOALS.fiber = profile.targets.fiber;
   }
   renderDashboard();
 }
@@ -5992,20 +8145,20 @@ function backfillScores() {
 
 // INIT
 // ═══════════════════════════════════════
-const profile = loadProfile();
-if (shouldShowOnboarding()) {
-  startOnboarding();
-} else {
-  renderDashboard();
-}
-renderLog();
-loadSuggestions();
-updateCartBadge();
-backfillScores();
+initAuth();
 
 // ── PWA Service Worker ──
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.register('/sw.js').then(reg => {
+    // Check for updates every 60 seconds
+    setInterval(() => reg.update(), 60000);
+  }).catch(() => {});
+  // Auto-reload when new version is deployed
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'CACHE_UPDATED') {
+      window.location.reload();
+    }
+  });
 }
 </script>
 </body>
