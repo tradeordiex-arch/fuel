@@ -223,14 +223,6 @@ def scan_image(image_b64: str, media_type: str = "image/jpeg") -> dict:
                     "type": "text",
                     "text": (
                         "Identify the food in this image.\n\n"
-                        "STEP 1 — PACKAGED PRODUCT CHECK:\n"
-                        "If this is a recognizable brand-name packaged product (frozen meal, snack bar, "
-                        "canned food, boxed item, fast food chain item, etc.), return it as a SINGLE item "
-                        "with the product name and brand. Use the label nutrition facts (per serving). "
-                        "Set \"packaged\": true and do NOT decompose into ingredients.\n\n"
-                        "STEP 2 — HOMEMADE / RESTAURANT / UNPACKAGED FOOD:\n"
-                        "If this is a homemade meal, restaurant plate, or unpackaged food, break it down "
-                        "into individual SUBSTANTIAL ingredients. Set \"packaged\": false.\n\n"
                         "Return ONLY valid JSON, no markdown:\n"
                         '{"name": "Meal or Product Name", "description": "brief description", '
                         '"category": "savory|sweet", "packaged": true|false, '
@@ -240,24 +232,30 @@ def scan_image(image_b64: str, media_type: str = "image/jpeg") -> dict:
                         '  {"name": "Ingredient", "emoji": "🥩", '
                         '"calories": 000, "protein": 00, "carbs": 00, "fat": 00, "fiber": 00}\n'
                         ']}\n\n'
-                        "Rules:\n"
-                        "- For PACKAGED products (packaged=true): ingredients array has ONE item — the product itself. "
-                        "Use the brand + product name. Macros from label nutrition per serving.\n"
-                        "- For HOMEMADE/RESTAURANT (packaged=false): ingredients array has 3-7 items. "
-                        "List each substantial ingredient separately (meat, grain, vegetables, cheese, sauce, toppings).\n"
+                        "IF HOMEMADE / RESTAURANT / UNPACKAGED FOOD (packaged=false):\n"
+                        "- Break down into 3-7 substantial ingredients (meat, grain, vegetables, cheese, sauce, toppings)\n"
                         "- ONLY include ingredients with 10+ calories. Skip salt, pepper, garlic, herbs, spices.\n"
-                        "- Macros are for the estimated portion visible in the image\n"
                         "- Use accurate per-ingredient macros, not rough splits of a total\n"
-                        "- emoji should be a single food emoji that represents the ingredient\n\n"
-                        "Packaged example: {\"name\": \"El Monterey Bean & Cheese Burrito\", \"packaged\": true, "
-                        "\"ingredients\": [{\"name\": \"El Monterey Bean & Cheese Burrito\", \"emoji\": \"🌯\", "
-                        "\"calories\": 280, \"protein\": 9, \"carbs\": 38, \"fat\": 10, \"fiber\": 3}]}\n\n"
+                        "- Macros are for the estimated portion visible in the image\n"
+                        "- emoji should be a single food emoji per ingredient\n\n"
                         "Homemade example: {\"name\": \"Burger\", \"packaged\": false, "
                         "\"ingredients\": [{\"name\": \"Beef patty\", \"emoji\": \"🥩\", \"calories\": 250, \"protein\": 20, \"carbs\": 0, \"fat\": 18, \"fiber\": 0}, "
                         "{\"name\": \"Brioche bun\", \"emoji\": \"🍞\", \"calories\": 200, \"protein\": 5, \"carbs\": 36, \"fat\": 4, \"fiber\": 1}, "
                         "{\"name\": \"Cheddar cheese\", \"emoji\": \"🧀\", \"calories\": 110, \"protein\": 7, \"carbs\": 0, \"fat\": 9, \"fiber\": 0}]}\n\n"
                         "Tags: HIGH PROTEIN, LOW CARB, HIGH FIBER, RICH IN GREENS, "
-                        "BALANCED, LIGHT, WHOLE GRAIN, HEALTHY FATS."
+                        "BALANCED, LIGHT, WHOLE GRAIN, HEALTHY FATS.\n\n"
+                        "CRITICAL — PACKAGED PRODUCT RULE (OVERRIDES EVERYTHING ABOVE):\n"
+                        "If you can see commercial packaging, a brand name, a nutrition label, a barcode, "
+                        "or this is a recognizable branded product (frozen meal, snack bar, candy, chips, "
+                        "canned food, boxed item, fast food chain item, protein bar, drink bottle, etc.):\n"
+                        "- Set \"packaged\": true\n"
+                        "- The ingredients array MUST have exactly ONE item: the product itself\n"
+                        "- Use the brand + product name as the ingredient name\n"
+                        "- Macros come from the label nutrition facts per serving\n"
+                        "- Do NOT decompose into sub-ingredients. A frozen burrito is ONE item, not beans + rice + cheese.\n\n"
+                        "Packaged example: {\"name\": \"El Monterey Bean & Cheese Burrito\", \"packaged\": true, "
+                        "\"ingredients\": [{\"name\": \"El Monterey Bean & Cheese Burrito\", \"emoji\": \"🌯\", "
+                        "\"calories\": 280, \"protein\": 9, \"carbs\": 38, \"fat\": 10, \"fiber\": 3}]}"
                     ),
                 },
             ],
@@ -492,15 +490,7 @@ def describe_meal(text: str) -> dict:
             "role": "user",
             "content": (
                 f"The user described a meal they ate: \"{text}\"\n\n"
-                "STEP 1 — PACKAGED PRODUCT CHECK:\n"
-                "If this is a recognizable brand-name packaged product (frozen meal, snack bar, "
-                "canned food, boxed item, fast food chain item, etc.), return it as a SINGLE item "
-                "with the product name and brand. Use the label nutrition facts (per serving). "
-                "Set \"packaged\": true and do NOT decompose into ingredients.\n\n"
-                "STEP 2 — HOMEMADE / RESTAURANT / UNPACKAGED FOOD:\n"
-                "If this is a homemade meal, restaurant plate, or unpackaged food, break it down "
-                "into individual SUBSTANTIAL ingredients. Set \"packaged\": false.\n\n"
-                "Return ONLY valid JSON, no markdown:\n"
+                "Identify the food and return ONLY valid JSON, no markdown:\n"
                 '{"name": "Meal or Product Name", "description": "brief description", '
                 '"category": "savory|sweet", "packaged": true|false, '
                 '"tags": ["HIGH PROTEIN", ...], '
@@ -509,15 +499,21 @@ def describe_meal(text: str) -> dict:
                 '  {"name": "Ingredient", "emoji": "🥩", '
                 '"calories": 000, "protein": 00, "carbs": 00, "fat": 00, "fiber": 00}\n'
                 ']}\n\n'
-                "Rules:\n"
-                "- For PACKAGED products (packaged=true): ingredients array has ONE item — the product itself. "
-                "Use the brand + product name. Macros from label nutrition per serving.\n"
-                "- For HOMEMADE/RESTAURANT (packaged=false): ingredients array has 3-7 items.\n"
+                "IF HOMEMADE / RESTAURANT / UNPACKAGED FOOD (packaged=false):\n"
+                "- Break down into 3-7 substantial ingredients.\n"
                 "- Only include ingredients with 10+ calories. Skip salt, pepper, herbs, spices.\n"
                 "- Be accurate with calorie estimates.\n"
                 "- If the description is vague, make reasonable assumptions.\n"
                 "Tags: HIGH PROTEIN, LOW CARB, HIGH FIBER, "
-                "RICH IN GREENS, BALANCED, LIGHT, WHOLE GRAIN, HEALTHY FATS."
+                "RICH IN GREENS, BALANCED, LIGHT, WHOLE GRAIN, HEALTHY FATS.\n\n"
+                "CRITICAL — PACKAGED PRODUCT RULE (OVERRIDES EVERYTHING ABOVE):\n"
+                "If the description names a specific brand or commercial product (frozen meal, snack bar, "
+                "candy, chips, canned food, fast food chain item, protein bar, drink, etc.):\n"
+                "- Set \"packaged\": true\n"
+                "- The ingredients array MUST have exactly ONE item: the product itself\n"
+                "- Use the brand + product name as the ingredient name\n"
+                "- Macros from label nutrition per serving\n"
+                "- Do NOT decompose. \"Amy's frozen burrito\" is ONE item, not beans + rice + cheese."
             ),
         }],
     )
