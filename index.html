@@ -3107,7 +3107,7 @@ function computeModifier(totals, mealCount, water) {
   if (allClean && mealCount >= 2) return 'CLEAN';
   if (mealCount >= 3 && calRatio <= 1.0) return 'CONSISTENT';
   if (water >= WATER_GOAL) return 'HYDRATED';
-  return 'STEADY';
+  return '';
 }
 
 function levelFromXp(xp) {
@@ -3146,8 +3146,8 @@ function computeTitle() {
   // "Super" prefix if any meal today qualifies
   const hasSuper = (state.meals || []).some(m => isSuperMeal(m));
   const superTag = hasSuper ? 'SUPER ' : '';
-
-  return `${modifier} ${superTag}${rank}`.toUpperCase();
+  const parts = [modifier, `${superTag}${rank}`].filter(Boolean);
+  return parts.join(' ').toUpperCase();
 }
 
 function rebuildWeekXp() {
