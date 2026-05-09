@@ -273,7 +273,7 @@ body {
 /* ═══════════════════════════════════════
    GREETING
    ═══════════════════════════════════════ */
-.greeting { padding: 32px 0 0; min-height: 90px; }
+.greeting { padding: 32px 0 0; min-height: 70px; }
 .greeting-hi { font-family: var(--serif); font-style: italic; font-size: 30px; color: var(--ink); line-height: 1.2; opacity: 0; animation: fade-up .6s ease .2s forwards; }
 .title-plate { font-size: 9px; font-weight: 600; letter-spacing: .25em; text-transform: uppercase; color: var(--gold); margin-top: 6px; opacity: 0; animation: fade-up .6s ease .3s forwards; }
 .greeting-sub { font-size: 12px; color: var(--ink-3); letter-spacing: .08em; margin-top: 10px; opacity: 0; animation: fade-up .6s ease .4s forwards; }
@@ -2453,7 +2453,6 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
   <div class="greeting" onclick="openWeekly()" style="cursor:pointer;-webkit-tap-highlight-color:transparent;">
     <div class="greeting-hi" id="greetingText">&nbsp;</div>
     <div class="title-plate" id="titlePlate">&nbsp;</div>
-    <div class="greeting-sub" id="greetingSub">&nbsp;</div>
     <div class="insight-card" id="insightCard" style="display:none;margin:0;" onclick="event.stopPropagation();toggleInsight()">
       <div class="insight-icon"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7z"/><line x1="9" y1="21" x2="15" y2="21"/></svg></div>
       <div class="insight-body">
