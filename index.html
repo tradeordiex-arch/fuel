@@ -6459,11 +6459,19 @@ function renderPantryPage() {
   if (_cachedShareStatus.shared && titleEl) {
     const memberFirstNames = _cachedShareStatus.members
       .map(m => {
-        if (!m.user_profiles) return '?';
-        const name = m.user_profiles.display_name || m.user_profiles.email.split('@')[0];
-        return name.split(' ')[0];
-      });
-    titleEl.textContent = memberFirstNames.join(' & ') + '\u2019s Pantry';
+        const prof = m.user_profiles || {};
+        const name = prof.display_name || prof.email || '';
+        if (!name) return null;
+        return name.split(/[\s@]/)[0]; // first name or email prefix
+      })
+      .filter(n => n && n !== '?');
+    if (memberFirstNames.length > 0) {
+      titleEl.textContent = memberFirstNames.join(' & ') + '\u2019s Pantry';
+    } else {
+      // Fallback: use local profile name + "Shared"
+      const pName = getProfileName();
+      titleEl.textContent = pName ? pName.split(' ')[0] + '\u2019s Shared Pantry' : 'SHARED PANTRY';
+    }
   } else if (titleEl) {
     titleEl.textContent = 'PANTRY';
   }
