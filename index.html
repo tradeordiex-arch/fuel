@@ -460,7 +460,7 @@ body {
 .macro-legend-val { font-weight: 300; color: var(--ink-3); }
 
 /* ── Goal chips ── */
-.goal-strip { display: flex; gap: 18px; padding: 22px 0 0; flex-wrap: wrap; justify-content: center; }
+.goal-strip { display: flex; gap: 18px; padding: 22px 0 0; flex-wrap: wrap; justify-content: center; min-height: 44px; }
 .goal-chip { font-size: 10px; font-weight: 400; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: opacity .2s ease; }
 .goal-chip:active { opacity: .6; }
 .goal-chip.on-track { color: var(--green); }
@@ -2454,7 +2454,7 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
     <div class="greeting-hi" id="greetingText"></div>
     <div class="title-plate" id="titlePlate"></div>
     <div class="greeting-sub" id="greetingSub"></div>
-    <div class="insight-card" id="insightCard" style="display:none;" onclick="event.stopPropagation();toggleInsight()">
+    <div class="insight-card" id="insightCard" style="display:none;margin:0;" onclick="event.stopPropagation();toggleInsight()">
       <div class="insight-icon"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7z"/><line x1="9" y1="21" x2="15" y2="21"/></svg></div>
       <div class="insight-body">
         <div class="insight-text" id="insightText"></div>
@@ -2464,7 +2464,7 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
   </div>
 
   <!-- QUICK TEMPLATES -->
-  <div class="templates-section" id="templatesSection" style="display:none;">
+  <div class="templates-section" id="templatesSection" style="opacity:0;transition:opacity .3s ease;">
     <div class="templates-row" id="templatesRow"></div>
   </div>
 
@@ -2506,7 +2506,7 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
     </div>
 
     <!-- Daily Score -->
-    <div class="daily-score" id="dailyScore" style="display:none;">
+    <div class="daily-score" id="dailyScore" style="opacity:0;transition:opacity .4s ease;">
       <div>
         <div class="score-value" id="scoreValue">0</div>
         <div class="score-label">SCORE</div>
@@ -3696,11 +3696,11 @@ function renderScore() {
   const result = calculateScore();
 
   if (!result) {
-    container.style.display = 'none';
+    container.style.opacity = '0';
     return;
   }
 
-  container.style.display = 'flex';
+  container.style.opacity = '1';
   const { score, factors } = result;
 
   // Value
@@ -3951,11 +3951,15 @@ function renderTemplates() {
   const row = document.getElementById('templatesRow');
 
   if (templates.length === 0) {
-    section.style.display = 'none';
+    section.style.opacity = '0';
+    section.style.height = '0';
+    section.style.overflow = 'hidden';
     return;
   }
 
-  section.style.display = 'block';
+  section.style.opacity = '1';
+  section.style.height = '';
+  section.style.overflow = '';
   row.innerHTML = templates.map((t, i) => `
     <div class="template-chip" data-tidx="${i}">
       <div class="template-chip-name">${t.name}</div>
