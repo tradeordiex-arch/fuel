@@ -3003,7 +3003,7 @@ const state = { meals: [], suggestions: [], suggestionsUsed: new Set(), chatHist
 // PROGRESSION ENGINE (hidden XP + title)
 // ═══════════════════════════════════════
 const XP_LEVELS = [0, 500, 1200, 2200, 3500, 5000, 7000, 9500, 12500, 16000];
-const XP_RANKS = ['Rookie','Apprentice','Contender','Warrior','Athlete','Machine','Spartan','Titan','Demigod','Olympian'];
+const XP_RANKS = ['Rookie','Apprentice','Neophyte','Warrior','Athlete','Machine','Spartan','Titan','Demigod','Olympian'];
 
 function weekStartKey() {
   const d = new Date();
@@ -3086,8 +3086,7 @@ function computeModifier(totals, mealCount, water) {
   if (protRatio >= 0.9 && calRatio >= 0.9 && calRatio <= 1.1) return 'DISCIPLINED';
   if (allClean && mealCount >= 2) return 'CLEAN';
   if (mealCount >= 3 && calRatio <= 1.0) return 'CONSISTENT';
-  if (water >= WATER_GOAL && mealCount >= 1) return 'HYDRATED';
-  if (mealCount === 0) return 'STEADY';
+  if (water >= WATER_GOAL) return 'HYDRATED';
   return 'STEADY';
 }
 
