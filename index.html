@@ -185,11 +185,13 @@ body.light .detail-overlay {
 body.light .ring-cal { filter: drop-shadow(0 0 4px rgba(158,125,58,.15)); }
 body.light .ring-prot { filter: drop-shadow(0 0 3px rgba(45,138,82,.1)); }
 body.light .ring-fat { filter: drop-shadow(0 0 3px rgba(43,108,176,.08)); }
+body.light .ring-fiber { filter: drop-shadow(0 0 3px rgba(251,191,36,.08)); }
 body.light .ring-track { stroke: var(--dim); }
 body.light .ring-cal { stroke: var(--gold); }
 body.light .ring-track-prot,
 body.light .ring-track-carbs,
-body.light .ring-track-fat { stroke: rgba(0,0,0,.04); }
+body.light .ring-track-fat,
+body.light .ring-track-fiber { stroke: rgba(0,0,0,.04); }
 body.light .ring-container::before {
   background: radial-gradient(circle, rgba(158,125,58,.04) 0%, rgba(45,138,82,.02) 30%, transparent 60%);
 }
@@ -379,15 +381,18 @@ body {
 .ring-track-prot  { stroke-width: 3.5; stroke: rgba(255,255,255,.03); }
 .ring-track-carbs { stroke-width: 3.5; stroke: rgba(255,255,255,.03); }
 .ring-track-fat   { stroke-width: 3.5; stroke: rgba(255,255,255,.03); }
+.ring-track-fiber { stroke-width: 3.5; stroke: rgba(255,255,255,.03); }
 .ring-arc { fill: none; stroke-linecap: butt; }
 .ring-cal   { transition: stroke-dashoffset 1.6s cubic-bezier(.16,1,.3,1) 0s; }
 .ring-prot  { transition: stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1) .2s; }
 .ring-carbs { transition: stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1) .4s; }
 .ring-fat   { transition: stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1) .6s; }
+.ring-fiber { transition: stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1) .8s; }
 .ring-cal   { stroke: url(#goldGrad); stroke-width: 5; filter: drop-shadow(0 0 6px var(--gold-glow)); }
 .ring-prot  { stroke: var(--green); stroke-width: 3.5; filter: drop-shadow(0 0 4px rgba(134,239,172,.12)); }
 .ring-carbs { stroke: var(--gold); stroke-width: 3.5; opacity: .7; }
 .ring-fat   { stroke: var(--blue); stroke-width: 3.5; filter: drop-shadow(0 0 4px rgba(147,197,253,.1)); }
+.ring-fiber { stroke: var(--amber); stroke-width: 3.5; filter: drop-shadow(0 0 4px rgba(251,191,36,.12)); }
 .ring-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
 .ring-number { font-size: 48px; font-weight: 200; letter-spacing: -.02em; color: var(--ink); line-height: 1; }
 .ring-unit { font-size: 10px; font-weight: 400; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-3); margin-top: 6px; }
@@ -449,6 +454,7 @@ body {
 .macro-legend-dot.prot { background: var(--green); }
 .macro-legend-dot.carbs { background: var(--gold); opacity: .7; }
 .macro-legend-dot.fat { background: var(--blue); }
+.macro-legend-dot.fiber { background: var(--amber); }
 .macro-legend-text { font-size: 11px; font-weight: 400; color: var(--ink-2); letter-spacing: .04em; }
 .macro-legend-val { font-weight: 300; color: var(--ink-3); }
 
@@ -2455,10 +2461,12 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
           <circle class="ring-track ring-track-prot" cx="110" cy="110" r="86"/>
           <circle class="ring-track ring-track-carbs" cx="110" cy="110" r="77"/>
           <circle class="ring-track ring-track-fat" cx="110" cy="110" r="68"/>
+          <circle class="ring-track ring-track-fiber" cx="110" cy="110" r="59"/>
           <circle class="ring-arc ring-cal" id="arcCal" cx="110" cy="110" r="98" stroke-dasharray="615.75" stroke-dashoffset="615.75"/>
           <circle class="ring-arc ring-prot" id="arcProt" cx="110" cy="110" r="86" stroke-dasharray="540.35" stroke-dashoffset="540.35"/>
           <circle class="ring-arc ring-carbs" id="arcCarbs" cx="110" cy="110" r="77" stroke-dasharray="483.81" stroke-dashoffset="483.81"/>
           <circle class="ring-arc ring-fat" id="arcFat" cx="110" cy="110" r="68" stroke-dasharray="427.26" stroke-dashoffset="427.26"/>
+          <circle class="ring-arc ring-fiber" id="arcFiber" cx="110" cy="110" r="59" stroke-dasharray="370.71" stroke-dashoffset="370.71"/>
         </svg>
         <div class="ring-center">
           <div class="ring-number" id="calRemaining">0</div>
@@ -2471,6 +2479,7 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
         <div class="macro-legend-item"><div class="macro-legend-dot prot"></div><div class="macro-legend-text" id="legendProt">0<span class="macro-legend-val"> / 140g P</span></div></div>
         <div class="macro-legend-item"><div class="macro-legend-dot carbs"></div><div class="macro-legend-text" id="legendCarbs">0<span class="macro-legend-val"> / 230g C</span></div></div>
         <div class="macro-legend-item"><div class="macro-legend-dot fat"></div><div class="macro-legend-text" id="legendFat">0<span class="macro-legend-val"> / 65g F</span></div></div>
+        <div class="macro-legend-item"><div class="macro-legend-dot fiber"></div><div class="macro-legend-text" id="legendFiber">0<span class="macro-legend-val"> / 28g Fib</span></div></div>
       </div>
     </div>
 
@@ -2980,6 +2989,7 @@ const RING = {
   prot:  { id: 'arcProt',  circ: 2*Math.PI*86 },
   carbs: { id: 'arcCarbs', circ: 2*Math.PI*77 },
   fat:   { id: 'arcFat',   circ: 2*Math.PI*68 },
+  fiber: { id: 'arcFiber', circ: 2*Math.PI*59 },
 };
 
 const state = { meals: [], suggestions: [], suggestionsUsed: new Set(), chatHistory: [], flavorFilter: 'all', water: 0, cart: [], lastPhotoDataUrl: null, loadingMore: false, goalFocus: null };
@@ -3330,11 +3340,13 @@ function renderDashboard() {
   const protPct = Math.min(totals.protein/GOALS.protein, 1);
   const carbPct = Math.min(totals.carbs/GOALS.carbs, 1);
   const fatPct  = Math.min(totals.fat/GOALS.fat, 1);
+  const fbrPct  = GOALS.fiber > 0 ? Math.min(totals.fiber/GOALS.fiber, 1) : 0;
 
   document.getElementById('arcCal').style.strokeDashoffset   = RING.cal.circ*(1-calPct);
   document.getElementById('arcProt').style.strokeDashoffset  = RING.prot.circ*(1-protPct);
   document.getElementById('arcCarbs').style.strokeDashoffset = RING.carbs.circ*(1-carbPct);
   document.getElementById('arcFat').style.strokeDashoffset   = RING.fat.circ*(1-fatPct);
+  document.getElementById('arcFiber').style.strokeDashoffset = RING.fiber.circ*(1-fbrPct);
 
   animateValue(document.getElementById('calRemaining'), remaining.calories, 1200);
 
@@ -3346,6 +3358,7 @@ function renderDashboard() {
   document.getElementById('legendProt').innerHTML  = `${totals.protein}<span class="macro-legend-val"> / ${GOALS.protein}g P</span>`;
   document.getElementById('legendCarbs').innerHTML = `${totals.carbs}<span class="macro-legend-val"> / ${GOALS.carbs}g C</span>`;
   document.getElementById('legendFat').innerHTML   = `${totals.fat}<span class="macro-legend-val"> / ${GOALS.fat}g F</span>`;
+  document.getElementById('legendFiber').innerHTML = `${totals.fiber}<span class="macro-legend-val"> / ${GOALS.fiber}g Fib</span>`;
 
   // Goal chips (tappable — scroll + filter suggestions)
   const fiberPct = GOALS.fiber > 0 ? totals.fiber / GOALS.fiber : 0;
