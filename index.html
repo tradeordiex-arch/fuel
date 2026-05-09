@@ -3710,12 +3710,13 @@ function renderScore() {
 
   // Grade
   const gradeEl = document.getElementById('scoreGrade');
-  if (score >= 90) gradeEl.textContent = 'Excellent';
-  else if (score >= 80) gradeEl.textContent = 'Great';
-  else if (score >= 70) gradeEl.textContent = 'Good';
-  else if (score >= 55) gradeEl.textContent = 'Okay';
-  else if (score >= 40) gradeEl.textContent = 'Needs work';
-  else gradeEl.textContent = 'Off track';
+  const _early = state.meals.length < 3 || new Date().getHours() < 14;
+  if (score >= 90) gradeEl.textContent = _early ? 'Crushing it' : 'Excellent';
+  else if (score >= 80) gradeEl.textContent = _early ? 'On fire' : 'Great';
+  else if (score >= 70) gradeEl.textContent = _early ? 'Strong' : 'Good';
+  else if (score >= 55) gradeEl.textContent = _early ? 'Solid start' : 'Okay';
+  else if (score >= 40) gradeEl.textContent = _early ? 'Building' : 'Needs work';
+  else gradeEl.textContent = _early ? 'Just getting started' : 'Off track';
 
   // Breakdown dots
   const breakdown = document.getElementById('scoreBreakdown');
