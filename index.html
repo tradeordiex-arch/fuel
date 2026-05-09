@@ -927,10 +927,26 @@ body {
 .suggestion-cal { font-size: 20px; font-weight: 200; color: var(--gold); }
 .suggestion-cal-unit { font-size: 9px; font-weight: 400; letter-spacing: .12em; color: var(--ink-3); }
 .suggestion-macros { font-size: 10px; color: var(--ink-3); letter-spacing: .04em; text-align: right; }
-/* Super meal glow */
-.super-meal { box-shadow: 0 0 20px rgba(74,222,128,.14), 0 0 6px rgba(74,222,128,.08); }
-@keyframes super-pulse { 0%,100% { box-shadow: 0 0 20px rgba(74,222,128,.14), 0 0 6px rgba(74,222,128,.08); } 50% { box-shadow: 0 0 28px rgba(74,222,128,.22), 0 0 8px rgba(74,222,128,.12); } }
-.super-meal { animation: super-pulse 3s ease-in-out infinite; }
+/* Super meal — subtle shimmer tracer */
+.super-meal { position: relative; overflow: hidden; }
+.super-meal::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  border: 1px solid transparent;
+  background: linear-gradient(var(--panel), var(--panel)) padding-box,
+              conic-gradient(from var(--tracer-angle, 0deg), transparent 0%, transparent 70%, rgba(74,222,128,.35) 78%, rgba(201,169,110,.25) 82%, transparent 90%) border-box;
+  animation: tracer-spin 4s linear infinite;
+}
+.super-meal::after {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 0%, rgba(74,222,128,.04) 0%, transparent 70%);
+}
+@property --tracer-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+@keyframes tracer-spin { to { --tracer-angle: 360deg; } }
+/* Fallback for browsers without @property — gentle static glow */
+@supports not (background: conic-gradient(red, blue)) {
+  .super-meal { box-shadow: 0 0 16px rgba(74,222,128,.1); }
+}
+.super-meal > * { position: relative; z-index: 1; }
 .suggestions-loading { display: flex; align-items: center; justify-content: center; height: 190px; color: var(--muted); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; }
 .suggestions-loading .spin { width: 16px; height: 16px; border: 1px solid var(--dim); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; margin-right: 10px; }
 @keyframes spin { to { transform: rotate(360deg); } }
