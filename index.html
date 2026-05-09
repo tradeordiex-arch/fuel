@@ -3289,21 +3289,6 @@ function renderGreeting() {
   const streak = getStreak();
   document.getElementById('greetingText').innerHTML = pName ? `${base}, ${pName}` : base;
 
-  let sub = '';
-  if (n === 0 && h >= 14) {
-    sub = "Nothing logged yet — busy day?";
-  } else if (calPct >= .9 && calPct < 1) {
-    sub = "Almost there. One smart meal to close it out.";
-  } else if (calPct >= 1) {
-    sub = "You've hit your calorie goal for today.";
-  } else if (protPct < .3 && h >= 17) {
-    sub = "Your protein could use a boost tonight.";
-  } else if (n === 0) {
-    sub = `${remaining.calories.toLocaleString()} calories budgeted today — let's get started.`;
-  } else {
-    sub = `You're ${remaining.calories.toLocaleString()} calories from your daily goal.`;
-  }
-  document.getElementById('greetingSub').textContent = sub;
 }
 
 // ═══════════════════════════════════════
