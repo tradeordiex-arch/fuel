@@ -3003,7 +3003,7 @@ const state = { meals: [], suggestions: [], suggestionsUsed: new Set(), chatHist
 // PROGRESSION ENGINE (hidden XP + title)
 // ═══════════════════════════════════════
 const XP_LEVELS = [0, 500, 1200, 2200, 3500, 5000, 7000, 9500, 12500, 16000];
-const XP_RANKS = ['Rookie','Consistent','Disciplined','Dialed In','Athlete','Machine','Spartan','Elite','Herculean','Olympian'];
+const XP_RANKS = ['Rookie','Apprentice','Contender','Warrior','Athlete','Machine','Spartan','Titan','Demigod','Olympian'];
 
 function weekStartKey() {
   const d = new Date();
@@ -3065,9 +3065,10 @@ function computeDailyXp(totals, mealCount, water, streak, meals) {
 function computeModifier(totals, mealCount, water) {
   const calRatio = GOALS.calories > 0 ? totals.calories / GOALS.calories : 0;
   const protRatio = GOALS.protein > 0 ? totals.protein / GOALS.protein : 0;
+  const fiberRatio = GOALS.fiber > 0 ? totals.fiber / GOALS.fiber : 0;
   const h = new Date().getHours();
 
-  // Check for junk meals
+  // Check for junk meals + clean meals
   const meals = state.meals || [];
   let junkCount = 0;
   let allClean = true;
@@ -3080,9 +3081,11 @@ function computeModifier(totals, mealCount, water) {
   if (junkCount >= 2) return 'BIG BONED';
   if (calRatio > 1.3) return 'FEASTING';
   if (mealCount === 0 && h >= 14) return 'FASTING';
-  if (protRatio >= 1.3 && mealCount >= 2) return 'POWER';
-  if (protRatio >= 0.9 && calRatio >= 0.9 && calRatio <= 1.1) return 'LOCKED IN';
+  if (protRatio >= 0.9 && calRatio >= 0.9 && calRatio <= 1.1 && water >= WATER_GOAL) return 'ELITE';
+  if (protRatio >= 1.3 && mealCount >= 2) return 'POWERFUL';
+  if (protRatio >= 0.9 && calRatio >= 0.9 && calRatio <= 1.1) return 'DISCIPLINED';
   if (allClean && mealCount >= 2) return 'CLEAN';
+  if (mealCount >= 3 && calRatio <= 1.0) return 'CONSISTENT';
   if (water >= WATER_GOAL && mealCount >= 1) return 'HYDRATED';
   if (mealCount === 0) return 'STEADY';
   return 'STEADY';
