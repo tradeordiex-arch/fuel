@@ -3235,8 +3235,7 @@ function renderGreeting() {
   const base = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   const pName = getProfileName();
   const streak = getStreak();
-  const streakHtml = streak >= 2 ? `<span class="streak-pill"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>${streak}d</span>` : '';
-  document.getElementById('greetingText').innerHTML = (pName ? `${base}, ${pName}` : base) + streakHtml;
+  document.getElementById('greetingText').innerHTML = pName ? `${base}, ${pName}` : base;
 
   let sub = '';
   if (n === 0 && h >= 14) {
