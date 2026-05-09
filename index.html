@@ -370,12 +370,12 @@ body {
     position: relative; z-index: 0;
   }
 }
-.ring-wrapper.pulse { animation: ring-pulse .5s ease; }
-@keyframes ring-pulse {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.04); }
-  100% { transform: scale(1); }
-}
+/* Ring arc glow flare on meal add */
+.ring-cal.flare   { filter: drop-shadow(0 0 14px rgba(201,169,110,.7)) drop-shadow(0 0 4px rgba(201,169,110,.4)); stroke-width: 6; }
+.ring-prot.flare  { filter: drop-shadow(0 0 14px rgba(74,222,128,.7)) drop-shadow(0 0 4px rgba(74,222,128,.4)); stroke-width: 5; }
+.ring-carbs.flare { filter: drop-shadow(0 0 14px rgba(201,169,110,.6)) drop-shadow(0 0 4px rgba(201,169,110,.3)); stroke-width: 5; opacity: 1; }
+.ring-fat.flare   { filter: drop-shadow(0 0 14px rgba(147,197,253,.7)) drop-shadow(0 0 4px rgba(147,197,253,.4)); stroke-width: 5; }
+.ring-fiber.flare { filter: drop-shadow(0 0 14px rgba(251,191,36,.7)) drop-shadow(0 0 4px rgba(251,191,36,.4)); stroke-width: 5; }
 .ring-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring-track { fill: none; stroke: var(--dim); }
 .ring-track-cal   { stroke-width: 5; }
@@ -384,11 +384,11 @@ body {
 .ring-track-fat   { stroke-width: 3.5; stroke: rgba(255,255,255,.03); }
 .ring-track-fiber { stroke-width: 3.5; stroke: rgba(255,255,255,.03); }
 .ring-arc { fill: none; stroke-linecap: butt; }
-.ring-cal   { transition: stroke-dashoffset 1.6s cubic-bezier(.16,1,.3,1) 0s; }
-.ring-prot  { transition: stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1) .2s; }
-.ring-carbs { transition: stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1) .4s; }
-.ring-fat   { transition: stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1) .6s; }
-.ring-fiber { transition: stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1) .8s; }
+.ring-cal   { transition: stroke-dashoffset 1.6s cubic-bezier(.16,1,.3,1) 0s, filter .3s ease, stroke-width .3s ease; }
+.ring-prot  { transition: stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1) .2s, filter .3s ease, stroke-width .3s ease; }
+.ring-carbs { transition: stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1) .4s, filter .3s ease, stroke-width .3s ease, opacity .3s ease; }
+.ring-fat   { transition: stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1) .6s, filter .3s ease, stroke-width .3s ease; }
+.ring-fiber { transition: stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1) .8s, filter .3s ease, stroke-width .3s ease; }
 .ring-cal   { stroke: url(#goldGrad); stroke-width: 5; filter: drop-shadow(0 0 6px var(--gold-glow)); }
 .ring-prot  { stroke: var(--green); stroke-width: 3.5; filter: drop-shadow(0 0 4px rgba(134,239,172,.12)); }
 .ring-carbs { stroke: var(--gold); stroke-width: 3.5; opacity: .7; }
@@ -3940,7 +3940,7 @@ function logTemplate(idx) {
   saveState();
   renderLog();
   renderDashboard();
-  pulseRing();
+  pulseRing(t);
   deductPantryFromMeal(t);
   showToast('ADDED TO LOG');
 }
@@ -4092,15 +4092,22 @@ function focusGoal(goal) {
 // ═══════════════════════════════════════
 // #8 — RING PULSE ON ADD
 // ═══════════════════════════════════════
-function pulseRing() {
-  const w = document.getElementById('ringWrapper');
-  // Add glow flash
-  const glow = document.createElement('div');
-  glow.className = 'ring-glow-flash';
-  w.appendChild(glow);
-  // Pulse scale
-  w.classList.add('pulse');
-  setTimeout(() => { w.classList.remove('pulse'); glow.remove(); }, 700);
+function pulseRing(meal) {
+  // Flare the ring arcs that the meal impacts
+  const arcs = [
+    { id: 'arcCal', has: true },
+    { id: 'arcProt', has: (meal && meal.protein > 0) || !meal },
+    { id: 'arcCarbs', has: (meal && meal.carbs > 0) || !meal },
+    { id: 'arcFat', has: (meal && meal.fat > 0) || !meal },
+    { id: 'arcFiber', has: (meal && meal.fiber > 0) || !meal },
+  ];
+  const els = [];
+  for (const a of arcs) {
+    if (!a.has) continue;
+    const el = document.getElementById(a.id);
+    if (el) { el.classList.add('flare'); els.push(el); }
+  }
+  setTimeout(() => { for (const el of els) el.classList.remove('flare'); }, 1200);
 }
 
 // ═══════════════════════════════════════
@@ -4315,7 +4322,7 @@ function openDetailPanel(meal, mode, index) {
       applyBeverageHydration(finalMeal);
       saveState(); renderLog(); renderDashboard(); closeDetail();
       showToast('ADDED TO LOG');
-      pulseRing(); loadSuggestions();
+      pulseRing(finalMeal); loadSuggestions();
     });
     document.getElementById('detailCartBtn').addEventListener('click', () => {
       addToCart(meal);
@@ -4900,7 +4907,7 @@ function addScannedMeal(data) {
   saveState(); renderLog(); renderDashboard();
   scanOverlay.classList.remove('open'); scanLine.style.display='none';
   showToast('ADDED TO LOG');
-  pulseRing();
+  pulseRing(data);
   deductPantryFromMeal(data);
   loadSuggestions();
 }
@@ -7273,7 +7280,7 @@ function addSearchResultNew(idx) {
   };
   state.meals.push(searchMeal);
   applyBeverageHydration(searchMeal);
-  saveState(); renderLog(); renderDashboard(); pulseRing();
+  saveState(); renderLog(); renderDashboard(); pulseRing(searchMeal);
   showToast('ADDED TO LOG');
   document.getElementById('searchOverlay').classList.remove('open');
 }
@@ -7480,7 +7487,7 @@ function barcodeAddToLog(product) {
   };
   state.meals.push(barcodeMeal);
   applyBeverageHydration(barcodeMeal);
-  saveState(); renderLog(); renderDashboard(); pulseRing();
+  saveState(); renderLog(); renderDashboard(); pulseRing(barcodeMeal);
   stopBarcodeScanner();
   document.getElementById('searchOverlay').classList.remove('open');
   showToast('ADDED TO LOG');
