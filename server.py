@@ -203,8 +203,95 @@ def lookup_ingredient(query: str) -> dict:
         return {"error": str(e)}
 
 
-def scan_image(image_b64: str, media_type: str = "image/jpeg") -> dict:
-    """Send image to Haiku for food identification with ingredient breakdown."""
+def _parse_json_response(text: str):
+    """Strip markdown fences and parse JSON."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+    return json.loads(text)
+
+
+def _classify_image(image_b64: str, media_type: str) -> dict:
+    """Quick call: is this a packaged product or homemade food?"""
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=200,
+        messages=[{
+            "role": "user",
+            "content": [
+                {
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": media_type, "data": image_b64},
+                },
+                {
+                    "type": "text",
+                    "text": (
+                        "Is this a packaged/branded commercial product (with packaging, label, brand name visible) "
+                        "or is it homemade/restaurant/unpackaged food?\n\n"
+                        "Return ONLY valid JSON: {\"packaged\": true, \"product\": \"Brand Product Name\"} "
+                        "or {\"packaged\": false, \"product\": \"\"}\n\n"
+                        "Packaged = you can see a wrapper, box, bag, label, brand logo, nutrition facts, or "
+                        "it's clearly a commercial product still in/on its packaging.\n"
+                        "NOT packaged = plated food, food on a cutting board, loose fruit, restaurant meal, "
+                        "homemade cooking, food without any visible commercial packaging."
+                    ),
+                },
+            ],
+        }],
+    )
+    return _parse_json_response(resp.content[0].text)
+
+
+def _scan_packaged(image_b64: str, media_type: str, product_name: str) -> dict:
+    """Scan a packaged product — return as single item with label nutrition."""
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=400,
+        messages=[{
+            "role": "user",
+            "content": [
+                {
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": media_type, "data": image_b64},
+                },
+                {
+                    "type": "text",
+                    "text": (
+                        f"This is a packaged product: \"{product_name}\"\n\n"
+                        "Read the nutrition label if visible, or use your knowledge of this product.\n"
+                        "Return ONLY valid JSON, no markdown:\n"
+                        '{"name": "Brand + Product Name", "description": "brief description", '
+                        '"category": "savory|sweet", "packaged": true, '
+                        '"tags": ["HIGH PROTEIN", ...], '
+                        '"health_note": "one-sentence nutritional insight", '
+                        '"calories": 000, "protein": 00, "carbs": 00, "fat": 00, "fiber": 00}\n\n'
+                        "Macros are per serving from the label. "
+                        "Tags: HIGH PROTEIN, LOW CARB, HIGH FIBER, BALANCED, LIGHT, WHOLE GRAIN, HEALTHY FATS."
+                    ),
+                },
+            ],
+        }],
+    )
+    result = _parse_json_response(resp.content[0].text)
+    result["packaged"] = True
+    # Wrap as single ingredient for frontend consistency
+    result["ingredients"] = [{
+        "name": result["name"],
+        "emoji": "📦",
+        "calories": result.get("calories", 0),
+        "protein": result.get("protein", 0),
+        "carbs": result.get("carbs", 0),
+        "fat": result.get("fat", 0),
+        "fiber": result.get("fiber", 0),
+    }]
+    return result
+
+
+def _scan_homemade(image_b64: str, media_type: str) -> dict:
+    """Scan homemade/restaurant food — decompose into ingredients."""
     resp = client.messages.create(
         model=MODEL,
         max_tokens=1200,
@@ -213,65 +300,46 @@ def scan_image(image_b64: str, media_type: str = "image/jpeg") -> dict:
             "content": [
                 {
                     "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": media_type,
-                        "data": image_b64,
-                    },
+                    "source": {"type": "base64", "media_type": media_type, "data": image_b64},
                 },
                 {
                     "type": "text",
                     "text": (
                         "Identify the food in this image.\n\n"
+                        "CRITICAL: You MUST break it down into individual SUBSTANTIAL ingredients. "
+                        "Do NOT return the meal as a single item. Always decompose into parts.\n\n"
                         "Return ONLY valid JSON, no markdown:\n"
-                        '{"name": "Meal or Product Name", "description": "brief description", '
-                        '"category": "savory|sweet", "packaged": true|false, '
+                        '{"name": "Meal Name", "description": "brief description", '
+                        '"category": "savory|sweet", "packaged": false, '
                         '"tags": ["HIGH PROTEIN", ...], '
                         '"health_note": "one-sentence nutritional insight", '
                         '"ingredients": [\n'
                         '  {"name": "Ingredient", "emoji": "🥩", '
                         '"calories": 000, "protein": 00, "carbs": 00, "fat": 00, "fiber": 00}\n'
                         ']}\n\n'
-                        "IF HOMEMADE / RESTAURANT / UNPACKAGED FOOD (packaged=false):\n"
-                        "- Break down into 3-7 substantial ingredients (meat, grain, vegetables, cheese, sauce, toppings)\n"
-                        "- ONLY include ingredients with 10+ calories. Skip salt, pepper, garlic, herbs, spices.\n"
-                        "- Use accurate per-ingredient macros, not rough splits of a total\n"
+                        "Rules:\n"
+                        "- The 'ingredients' array is MANDATORY. Never omit it.\n"
+                        "- List each substantial ingredient separately (meat, grain, vegetables, cheese, sauce, toppings)\n"
+                        "- ONLY include ingredients with 10+ calories in the visible portion. Skip salt, pepper, garlic, herbs, spices.\n"
                         "- Macros are for the estimated portion visible in the image\n"
-                        "- emoji should be a single food emoji per ingredient\n\n"
-                        "Homemade example: {\"name\": \"Burger\", \"packaged\": false, "
-                        "\"ingredients\": [{\"name\": \"Beef patty\", \"emoji\": \"🥩\", \"calories\": 250, \"protein\": 20, \"carbs\": 0, \"fat\": 18, \"fiber\": 0}, "
+                        "- Use accurate per-ingredient macros, not rough splits of a total\n"
+                        "- emoji should be a single food emoji that represents the ingredient\n"
+                        "- Aim for 3-7 ingredients per meal. Don't over-decompose.\n\n"
+                        "Example for a burger: [{\"name\": \"Beef patty\", \"emoji\": \"🥩\", \"calories\": 250, \"protein\": 20, \"carbs\": 0, \"fat\": 18, \"fiber\": 0}, "
                         "{\"name\": \"Brioche bun\", \"emoji\": \"🍞\", \"calories\": 200, \"protein\": 5, \"carbs\": 36, \"fat\": 4, \"fiber\": 1}, "
-                        "{\"name\": \"Cheddar cheese\", \"emoji\": \"🧀\", \"calories\": 110, \"protein\": 7, \"carbs\": 0, \"fat\": 9, \"fiber\": 0}]}\n\n"
+                        "{\"name\": \"Cheddar cheese\", \"emoji\": \"🧀\", \"calories\": 110, \"protein\": 7, \"carbs\": 0, \"fat\": 9, \"fiber\": 0}]\n\n"
                         "Tags: HIGH PROTEIN, LOW CARB, HIGH FIBER, RICH IN GREENS, "
-                        "BALANCED, LIGHT, WHOLE GRAIN, HEALTHY FATS.\n\n"
-                        "CRITICAL — PACKAGED PRODUCT RULE (OVERRIDES EVERYTHING ABOVE):\n"
-                        "If you can see commercial packaging, a brand name, a nutrition label, a barcode, "
-                        "or this is a recognizable branded product (frozen meal, snack bar, candy, chips, "
-                        "canned food, boxed item, fast food chain item, protein bar, drink bottle, etc.):\n"
-                        "- Set \"packaged\": true\n"
-                        "- The ingredients array MUST have exactly ONE item: the product itself\n"
-                        "- Use the brand + product name as the ingredient name\n"
-                        "- Macros come from the label nutrition facts per serving\n"
-                        "- Do NOT decompose into sub-ingredients. A frozen burrito is ONE item, not beans + rice + cheese.\n\n"
-                        "Packaged example: {\"name\": \"El Monterey Bean & Cheese Burrito\", \"packaged\": true, "
-                        "\"ingredients\": [{\"name\": \"El Monterey Bean & Cheese Burrito\", \"emoji\": \"🌯\", "
-                        "\"calories\": 280, \"protein\": 9, \"carbs\": 38, \"fat\": 10, \"fiber\": 3}]}"
+                        "BALANCED, LIGHT, WHOLE GRAIN, HEALTHY FATS."
                     ),
                 },
             ],
         }],
     )
-    text = resp.content[0].text.strip()
-    # Strip markdown fences if present
-    if text.startswith("```"):
-        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
-    result = json.loads(text)
+    result = _parse_json_response(resp.content[0].text)
+    result["packaged"] = False
 
-    # If AI didn't return ingredients and it's not a packaged product, decompose via a follow-up call
-    if ("ingredients" not in result or not result["ingredients"]) and not result.get("packaged"):
+    # If AI didn't return ingredients, decompose via a follow-up call
+    if "ingredients" not in result or not result["ingredients"]:
         try:
             decomp = client.messages.create(
                 model=MODEL,
@@ -290,15 +358,9 @@ def scan_image(image_b64: str, media_type: str = "image/jpeg") -> dict:
                     ),
                 }],
             )
-            dt = decomp.content[0].text.strip()
-            if dt.startswith("```"):
-                dt = dt.split("\n", 1)[1] if "\n" in dt else dt[3:]
-                if dt.endswith("```"):
-                    dt = dt[:-3]
-                dt = dt.strip()
-            result["ingredients"] = json.loads(dt)
+            result["ingredients"] = _parse_json_response(decomp.content[0].text)
         except Exception:
-            pass  # Fall through with no ingredients — frontend handles gracefully
+            pass
 
     # Compute totals from ingredients
     if "ingredients" in result and result["ingredients"]:
@@ -309,6 +371,21 @@ def scan_image(image_b64: str, media_type: str = "image/jpeg") -> dict:
         result["fiber"] = sum(i.get("fiber", 0) for i in result["ingredients"])
 
     return result
+
+
+def scan_image(image_b64: str, media_type: str = "image/jpeg") -> dict:
+    """Two-step scan: classify packaged vs homemade, then branch."""
+    # Step 1: Quick classify
+    try:
+        classify = _classify_image(image_b64, media_type)
+    except Exception:
+        classify = {"packaged": False}
+
+    # Step 2: Branch based on classification
+    if classify.get("packaged"):
+        return _scan_packaged(image_b64, media_type, classify.get("product", ""))
+    else:
+        return _scan_homemade(image_b64, media_type)
 
 
 def chat_coach(messages: list, daily_state: dict) -> str:
@@ -482,56 +559,97 @@ def suggest_meals(remaining_cal: int, remaining_protein: int, flavor: str = "all
 
 
 def describe_meal(text: str) -> dict:
-    """Text description → structured meal data with ingredient breakdown via Haiku."""
-    resp = client.messages.create(
-        model=MODEL,
-        max_tokens=1200,
-        messages=[{
-            "role": "user",
-            "content": (
-                f"The user described a meal they ate: \"{text}\"\n\n"
-                "Identify the food and return ONLY valid JSON, no markdown:\n"
-                '{"name": "Meal or Product Name", "description": "brief description", '
-                '"category": "savory|sweet", "packaged": true|false, '
-                '"tags": ["HIGH PROTEIN", ...], '
-                '"health_note": "one-sentence nutritional insight", '
-                '"ingredients": [\n'
-                '  {"name": "Ingredient", "emoji": "🥩", '
-                '"calories": 000, "protein": 00, "carbs": 00, "fat": 00, "fiber": 00}\n'
-                ']}\n\n'
-                "IF HOMEMADE / RESTAURANT / UNPACKAGED FOOD (packaged=false):\n"
-                "- Break down into 3-7 substantial ingredients.\n"
-                "- Only include ingredients with 10+ calories. Skip salt, pepper, herbs, spices.\n"
-                "- Be accurate with calorie estimates.\n"
-                "- If the description is vague, make reasonable assumptions.\n"
-                "Tags: HIGH PROTEIN, LOW CARB, HIGH FIBER, "
-                "RICH IN GREENS, BALANCED, LIGHT, WHOLE GRAIN, HEALTHY FATS.\n\n"
-                "CRITICAL — PACKAGED PRODUCT RULE (OVERRIDES EVERYTHING ABOVE):\n"
-                "If the description names a specific brand or commercial product (frozen meal, snack bar, "
-                "candy, chips, canned food, fast food chain item, protein bar, drink, etc.):\n"
-                "- Set \"packaged\": true\n"
-                "- The ingredients array MUST have exactly ONE item: the product itself\n"
-                "- Use the brand + product name as the ingredient name\n"
-                "- Macros from label nutrition per serving\n"
-                "- Do NOT decompose. \"Amy's frozen burrito\" is ONE item, not beans + rice + cheese."
-            ),
-        }],
-    )
-    text_out = resp.content[0].text.strip()
-    if text_out.startswith("```"):
-        text_out = text_out.split("\n", 1)[1] if "\n" in text_out else text_out[3:]
-        if text_out.endswith("```"):
-            text_out = text_out[:-3]
-        text_out = text_out.strip()
-    result = json.loads(text_out)
+    """Text description → structured meal data. Detects packaged products vs homemade."""
+    # Step 1: Quick classify — is this a brand/packaged product?
+    try:
+        classify = client.messages.create(
+            model=MODEL,
+            max_tokens=100,
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"Is \"{text}\" a specific brand-name or commercial packaged product "
+                    "(frozen meal, snack bar, candy, chips, canned food, fast food chain item, "
+                    "protein bar, bottled drink, etc.)?\n\n"
+                    "Return ONLY: {\"packaged\": true, \"product\": \"Brand Product Name\"} "
+                    "or {\"packaged\": false, \"product\": \"\"}"
+                ),
+            }],
+        )
+        cls = _parse_json_response(classify.content[0].text)
+    except Exception:
+        cls = {"packaged": False}
 
-    # Compute totals from ingredients
-    if "ingredients" in result and result["ingredients"]:
-        result["calories"] = sum(i.get("calories", 0) for i in result["ingredients"])
-        result["protein"] = sum(i.get("protein", 0) for i in result["ingredients"])
-        result["carbs"] = sum(i.get("carbs", 0) for i in result["ingredients"])
-        result["fat"] = sum(i.get("fat", 0) for i in result["ingredients"])
-        result["fiber"] = sum(i.get("fiber", 0) for i in result["ingredients"])
+    # Step 2: Branch
+    if cls.get("packaged"):
+        resp = client.messages.create(
+            model=MODEL,
+            max_tokens=400,
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"The user ate: \"{text}\"\n"
+                    f"This is a packaged product: \"{cls.get('product', text)}\"\n\n"
+                    "Return ONLY valid JSON with the product's label nutrition per serving:\n"
+                    '{"name": "Brand + Product Name", "description": "brief description", '
+                    '"category": "savory|sweet", "packaged": true, '
+                    '"tags": ["HIGH PROTEIN", ...], '
+                    '"health_note": "one-sentence nutritional insight", '
+                    '"calories": 000, "protein": 00, "carbs": 00, "fat": 00, "fiber": 00}\n\n'
+                    "Tags: HIGH PROTEIN, LOW CARB, HIGH FIBER, BALANCED, LIGHT, WHOLE GRAIN, HEALTHY FATS."
+                ),
+            }],
+        )
+        result = _parse_json_response(resp.content[0].text)
+        result["packaged"] = True
+        result["ingredients"] = [{
+            "name": result["name"],
+            "emoji": "📦",
+            "calories": result.get("calories", 0),
+            "protein": result.get("protein", 0),
+            "carbs": result.get("carbs", 0),
+            "fat": result.get("fat", 0),
+            "fiber": result.get("fiber", 0),
+        }]
+    else:
+        resp = client.messages.create(
+            model=MODEL,
+            max_tokens=1200,
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"The user described a meal they ate: \"{text}\"\n\n"
+                    "Break it down into individual SUBSTANTIAL ingredients.\n"
+                    "Return ONLY valid JSON, no markdown:\n"
+                    '{"name": "Meal Name", "description": "brief description", '
+                    '"category": "savory|sweet", "packaged": false, '
+                    '"tags": ["HIGH PROTEIN", ...], '
+                    '"health_note": "one-sentence nutritional insight", '
+                    '"ingredients": [\n'
+                    '  {"name": "Ingredient", "emoji": "🥩", '
+                    '"calories": 000, "protein": 00, "carbs": 00, "fat": 00, "fiber": 00}\n'
+                    ']}\n\n'
+                    "Rules:\n"
+                    "- The 'ingredients' array is MANDATORY.\n"
+                    "- Only include ingredients with 10+ calories. Skip salt, pepper, herbs, spices.\n"
+                    "- Aim for 3-7 ingredients. Don't over-decompose.\n"
+                    "- Be accurate with calorie estimates.\n"
+                    "- If the description is vague, make reasonable assumptions.\n"
+                    "Tags: HIGH PROTEIN, LOW CARB, HIGH FIBER, "
+                    "RICH IN GREENS, BALANCED, LIGHT, WHOLE GRAIN, HEALTHY FATS."
+                ),
+            }],
+        )
+        result = _parse_json_response(resp.content[0].text)
+        result["packaged"] = False
+
+        # Compute totals from ingredients
+        if "ingredients" in result and result["ingredients"]:
+            result["calories"] = sum(i.get("calories", 0) for i in result["ingredients"])
+            result["protein"] = sum(i.get("protein", 0) for i in result["ingredients"])
+            result["carbs"] = sum(i.get("carbs", 0) for i in result["ingredients"])
+            result["fat"] = sum(i.get("fat", 0) for i in result["ingredients"])
+            result["fiber"] = sum(i.get("fiber", 0) for i in result["ingredients"])
 
     return result
 
