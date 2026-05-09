@@ -275,7 +275,8 @@ body {
    ═══════════════════════════════════════ */
 .greeting { padding: 32px 0 0; }
 .greeting-hi { font-family: var(--serif); font-style: italic; font-size: 30px; color: var(--ink); line-height: 1.2; opacity: 0; animation: fade-up .6s ease .2s forwards; }
-.greeting-sub { font-size: 12px; color: var(--ink-3); letter-spacing: .08em; margin-top: 10px; opacity: 0; animation: fade-up .6s ease .35s forwards; }
+.title-plate { font-size: 9px; font-weight: 600; letter-spacing: .25em; text-transform: uppercase; color: var(--gold); margin-top: 6px; opacity: 0; animation: fade-up .6s ease .3s forwards; }
+.greeting-sub { font-size: 12px; color: var(--ink-3); letter-spacing: .08em; margin-top: 10px; opacity: 0; animation: fade-up .6s ease .4s forwards; }
 
 /* ═══════════════════════════════════════
    #9 — DAILY INSIGHT CARD
@@ -2431,6 +2432,7 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
   <!-- GREETING + INSIGHT -->
   <div class="greeting" onclick="openWeekly()" style="cursor:pointer;-webkit-tap-highlight-color:transparent;">
     <div class="greeting-hi" id="greetingText"></div>
+    <div class="title-plate" id="titlePlate"></div>
     <div class="greeting-sub" id="greetingSub"></div>
     <div class="insight-card" id="insightCard" style="display:none;" onclick="event.stopPropagation();toggleInsight()">
       <div class="insight-icon"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7z"/><line x1="9" y1="21" x2="15" y2="21"/></svg></div>
@@ -2994,6 +2996,138 @@ const RING = {
 
 const state = { meals: [], suggestions: [], suggestionsUsed: new Set(), chatHistory: [], flavorFilter: 'all', water: 0, cart: [], lastPhotoDataUrl: null, loadingMore: false, goalFocus: null };
 
+// ═══════════════════════════════════════
+// PROGRESSION ENGINE (hidden XP + title)
+// ═══════════════════════════════════════
+const XP_LEVELS = [0, 500, 1200, 2200, 3500, 5000, 7000, 9500, 12500, 16000];
+const XP_RANKS = ['Rookie','Consistent','Disciplined','Dialed In','Athlete','Machine','Spartan','Elite','Herculean','Olympian'];
+
+function weekStartKey() {
+  const d = new Date();
+  const day = d.getDay();
+  d.setDate(d.getDate() - day); // back to Sunday
+  d.setHours(0,0,0,0);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function loadWeekXp() {
+  try {
+    const data = JSON.parse(localStorage.getItem('fuel_xp') || '{}');
+    const wk = weekStartKey();
+    if (data.week !== wk) return { week: wk, days: {} };
+    return data;
+  } catch { return { week: weekStartKey(), days: {} }; }
+}
+
+function saveWeekXp(data) {
+  localStorage.setItem('fuel_xp', JSON.stringify(data));
+}
+
+function computeDailyXp(totals, mealCount, water, streak) {
+  let xp = 0;
+
+  // Per-meal bonuses
+  const meals = state.meals || [];
+  for (const m of meals) {
+    xp += 50; // logged a meal
+    const p = m.protein || 0;
+    const c = m.calories || 0;
+    if (p > 30) xp += 100; // high protein
+    if (c < 400 && p > 25) xp += 200; // power meal
+    if (c > 800 && p < 10) xp -= 200; // junk
+  }
+
+  // Goal bonuses
+  const calRatio = GOALS.calories > 0 ? totals.calories / GOALS.calories : 0;
+  const protRatio = GOALS.protein > 0 ? totals.protein / GOALS.protein : 0;
+  const fiberRatio = GOALS.fiber > 0 ? totals.fiber / GOALS.fiber : 0;
+
+  if (protRatio >= 0.9) xp += 500;
+  if (calRatio >= 0.95 && calRatio <= 1.05) xp += 500;
+  if (fiberRatio >= 0.8) xp += 250;
+  if (water >= WATER_GOAL) xp += 250;
+  if (mealCount >= 3) xp += 150;
+  if (calRatio > 1.3) xp -= 300;
+
+  // Floor at 0
+  xp = Math.max(0, xp);
+
+  // Streak multiplier
+  if (streak >= 7) xp = Math.round(xp * 2);
+  else if (streak >= 3) xp = Math.round(xp * 1.5);
+
+  return xp;
+}
+
+function computeModifier(totals, mealCount, water) {
+  const calRatio = GOALS.calories > 0 ? totals.calories / GOALS.calories : 0;
+  const protRatio = GOALS.protein > 0 ? totals.protein / GOALS.protein : 0;
+  const h = new Date().getHours();
+
+  // Check for junk meals
+  const meals = state.meals || [];
+  let junkCount = 0;
+  let allClean = true;
+  for (const m of meals) {
+    if ((m.calories || 0) > 800 && (m.protein || 0) < 10) junkCount++;
+    if ((m.calories || 0) > 500 || (m.protein || 0) < 10) allClean = false;
+  }
+
+  // Priority order (first match wins)
+  if (junkCount >= 2) return 'BIG BONED';
+  if (calRatio > 1.3) return 'FEASTING';
+  if (mealCount === 0 && h >= 14) return 'FASTING';
+  if (protRatio >= 1.3 && mealCount >= 2) return 'POWER';
+  if (protRatio >= 0.9 && calRatio >= 0.9 && calRatio <= 1.1) return 'LOCKED IN';
+  if (allClean && mealCount >= 2) return 'CLEAN';
+  if (water >= WATER_GOAL && mealCount >= 1) return 'HYDRATED';
+  if (mealCount === 0) return 'STEADY';
+  return 'STEADY';
+}
+
+function levelFromXp(xp) {
+  let level = 1;
+  for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
+    if (xp >= XP_LEVELS[i]) { level = i + 1; break; }
+  }
+  return level;
+}
+
+function computeTitle() {
+  const totals = getTotals();
+  const mealCount = state.meals.length;
+  const streak = getStreak();
+
+  // Compute today's XP
+  const dailyXp = computeDailyXp(totals, mealCount, state.water, streak);
+
+  // Load week data, update today
+  const weekData = loadWeekXp();
+  const today = todayKey();
+  weekData.days[today] = dailyXp;
+  saveWeekXp(weekData);
+
+  // Sum week XP
+  let weekXp = 0;
+  for (const d of Object.values(weekData.days)) weekXp += (d || 0);
+
+  // Level + rank
+  const level = levelFromXp(weekXp);
+  const rank = XP_RANKS[level - 1] || 'Rookie';
+
+  // Daily modifier
+  const modifier = computeModifier(totals, mealCount, state.water);
+
+  return `${modifier} ${rank}`.toUpperCase();
+}
+
+function renderTitle() {
+  const el = document.getElementById('titlePlate');
+  if (!el) return;
+  const title = computeTitle();
+  if (el.textContent !== title) el.textContent = title;
+}
+
 // ── Date-keyed localStorage ──
 function todayKey() {
   const d = new Date();
@@ -3351,9 +3485,18 @@ function renderDashboard() {
   animateValue(document.getElementById('calRemaining'), remaining.calories, 1200);
 
   const st = document.getElementById('ringStatus');
-  if (calPct>=1)     { st.textContent='goal reached'; st.style.color='var(--green)'; }
-  else if(calPct>.9) { st.textContent='almost there';  st.style.color='var(--amber)'; }
-  else               { st.textContent='on track';       st.style.color='var(--gold)'; }
+  const _h = new Date().getHours();
+  const _n = state.meals.length;
+  const _pp = GOALS.protein > 0 ? totals.protein / GOALS.protein : 0;
+  if (calPct >= 1 && _pp >= 0.9) { st.textContent='nailed it'; st.style.color='var(--green)'; }
+  else if (calPct >= 1)          { st.textContent='goal reached'; st.style.color='var(--green)'; }
+  else if (calPct > 1.3)        { st.textContent='over budget'; st.style.color='var(--red)'; }
+  else if (calPct > 0.9)        { st.textContent='almost there'; st.style.color='var(--amber)'; }
+  else if (_n === 0 && _h < 11)  { st.textContent='ready'; st.style.color='var(--gold)'; }
+  else if (_n === 0 && _h >= 14) { st.textContent='nothing logged'; st.style.color='var(--amber)'; }
+  else if (_n > 0 && _pp > 0.5 && _h < 14) { st.textContent='strong start'; st.style.color='var(--gold)'; }
+  else if (_n > 0 && calPct < 0.5 && _h < 14) { st.textContent='on pace'; st.style.color='var(--gold)'; }
+  else                           { st.textContent='on track'; st.style.color='var(--gold)'; }
 
   document.getElementById('legendProt').innerHTML  = `${totals.protein}<span class="macro-legend-val"> / ${GOALS.protein}g P</span>`;
   document.getElementById('legendCarbs').innerHTML = `${totals.carbs}<span class="macro-legend-val"> / ${GOALS.carbs}g C</span>`;
@@ -3373,6 +3516,7 @@ function renderDashboard() {
   `;
 
   renderGreeting();
+  renderTitle();
   renderInsight();
   renderWater();
   renderTemplates();
