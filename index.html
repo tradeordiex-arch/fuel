@@ -928,9 +928,8 @@ body {
 .suggestion-cal-unit { font-size: 9px; font-weight: 400; letter-spacing: .12em; color: var(--ink-3); }
 .suggestion-macros { font-size: 10px; color: var(--ink-3); letter-spacing: .04em; text-align: right; }
 /* Super meal glow */
-.super-meal { box-shadow: 0 0 18px rgba(74,222,128,.12), 0 0 4px rgba(74,222,128,.06); border-color: rgba(74,222,128,.2) !important; }
-.super-meal::before { content: ''; position: absolute; inset: -1px; background: linear-gradient(135deg, rgba(74,222,128,.06) 0%, transparent 50%, rgba(201,169,110,.04) 100%); pointer-events: none; z-index: 0; }
-@keyframes super-pulse { 0%,100% { box-shadow: 0 0 18px rgba(74,222,128,.12), 0 0 4px rgba(74,222,128,.06); } 50% { box-shadow: 0 0 24px rgba(74,222,128,.18), 0 0 6px rgba(74,222,128,.1); } }
+.super-meal { box-shadow: 0 0 20px rgba(74,222,128,.14), 0 0 6px rgba(74,222,128,.08); }
+@keyframes super-pulse { 0%,100% { box-shadow: 0 0 20px rgba(74,222,128,.14), 0 0 6px rgba(74,222,128,.08); } 50% { box-shadow: 0 0 28px rgba(74,222,128,.22), 0 0 8px rgba(74,222,128,.12); } }
 .super-meal { animation: super-pulse 3s ease-in-out infinite; }
 .suggestions-loading { display: flex; align-items: center; justify-content: center; height: 190px; color: var(--muted); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; }
 .suggestions-loading .spin { width: 16px; height: 16px; border: 1px solid var(--dim); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; margin-right: 10px; }
@@ -3184,6 +3183,22 @@ function isSuperMeal(meal) {
   return false;
 }
 
+// ── Backfill fiber on meals missing it ──
+(function backfillFiber() {
+  try {
+    const days = JSON.parse(localStorage.getItem('fuel_days') || '{}');
+    let patched = false;
+    for (const key of Object.keys(days)) {
+      const d = days[key];
+      if (!d || !d.meals) continue;
+      for (const m of d.meals) {
+        if (m && !('fiber' in m)) { m.fiber = 0; patched = true; }
+      }
+    }
+    if (patched) localStorage.setItem('fuel_days', JSON.stringify(days));
+  } catch {}
+})();
+
 // ── Date-keyed localStorage ──
 function todayKey() {
   const d = new Date();
@@ -4271,7 +4286,7 @@ function openDetailPanel(meal, mode, index) {
   } else {
     document.getElementById('detailAddBtn').addEventListener('click', () => {
       const mult = getDetailMult();
-      const s = { calories: Math.round(meal.calories * mult), protein: Math.round(meal.protein * mult), carbs: Math.round(meal.carbs * mult), fat: Math.round(meal.fat * mult) };
+      const s = { calories: Math.round(meal.calories * mult), protein: Math.round(meal.protein * mult), carbs: Math.round(meal.carbs * mult), fat: Math.round(meal.fat * mult), fiber: Math.round((meal.fiber || 0) * mult) };
       const label = getPortionLabel(detailPortionPct);
       const finalMeal = { ...meal, ...s };
       if (Math.abs(detailPortionPct - 0.5) > 0.04) finalMeal.name = cleanName + ` (${label})`;

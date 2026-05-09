@@ -541,7 +541,7 @@ def suggest_meals(remaining_cal: int, remaining_protein: int, flavor: str = "all
                 f"{context_block}\n" if context_block else ""
                 "Return ONLY a JSON array, no markdown:\n"
                 '[{"name": "Meal Name", "calories": 000, "protein": 00, "carbs": 00, '
-                '"fat": 00, "category": "savory|sweet", '
+                '"fat": 00, "fiber": 00, "category": "savory|sweet", '
                 '"tags": ["HIGH PROTEIN"], "one_liner": "brief appetizing description"}]\n'
                 "Make them diverse, realistic, and appetizing. Use real dishes, not generic. "
                 "Include exact macro numbers. Tags: HIGH PROTEIN, LOW CARB, HIGH FIBER, "
