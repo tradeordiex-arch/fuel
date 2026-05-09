@@ -8170,6 +8170,53 @@ if ('serviceWorker' in navigator) {
     }
   });
 }
+
+// ═══════════════════════════════════════
+// iOS PWA INSTALL BANNER
+// ═══════════════════════════════════════
+(() => {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  const dismissed = localStorage.getItem('fuel_install_dismissed');
+
+  if (isIOS && !isStandalone && !dismissed) {
+    const banner = document.createElement('div');
+    banner.id = 'installBanner';
+    banner.innerHTML = `
+      <div style="
+        position:fixed; bottom:0; left:0; right:0; z-index:99999;
+        background:linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+        border-top:1px solid rgba(212,175,55,0.3);
+        padding:14px 16px; display:flex; align-items:center; gap:12px;
+        font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+        animation: slideUpBanner 0.4s ease-out;
+      ">
+        <div style="
+          width:40px; height:40px; border-radius:10px; flex-shrink:0;
+          background:linear-gradient(135deg, #d4af37 0%, #b8962e 100%);
+          display:flex; align-items:center; justify-content:center;
+          font-size:20px;
+        ">&#9889;</div>
+        <div style="flex:1; min-width:0;">
+          <div style="color:#f5f0e8; font-size:13px; font-weight:600; letter-spacing:0.02em;">Install FUEL</div>
+          <div style="color:#999; font-size:11px; margin-top:2px; line-height:1.3;">
+            Tap <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4A9EF5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin:0 1px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> then <strong style="color:#f5f0e8;">Add to Home Screen</strong>
+          </div>
+        </div>
+        <button onclick="document.getElementById('installBanner').remove();localStorage.setItem('fuel_install_dismissed','1');" style="
+          background:none; border:none; color:#666; font-size:20px; padding:4px 8px;
+          cursor:pointer; flex-shrink:0; line-height:1;
+        ">&times;</button>
+      </div>
+    `;
+    document.body.appendChild(banner);
+
+    // Add animation
+    const style = document.createElement('style');
+    style.textContent = '@keyframes slideUpBanner { from { transform:translateY(100%); opacity:0; } to { transform:translateY(0); opacity:1; } }';
+    document.head.appendChild(style);
+  }
+})();
 </script>
 </body>
 </html>
