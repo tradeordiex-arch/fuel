@@ -6942,6 +6942,7 @@ async function searchAPIs(query) {
           if (n.nutrientNumber === '203') nuts.protein = Math.round(n.value || 0);
           if (n.nutrientNumber === '205') nuts.carbs = Math.round(n.value || 0);
           if (n.nutrientNumber === '204') nuts.fat = Math.round(n.value || 0);
+          if (n.nutrientNumber === '291') nuts.fiber = Math.round(n.value || 0);
         });
         if (!nuts.cal && !nuts.protein) return; // skip empty
         const name = (f.description || '').replace(/,?\s*(UPC:?\s*\d+)/gi, '');
@@ -6951,7 +6952,7 @@ async function searchAPIs(query) {
           name: name.length > 50 ? name.substring(0, 47) + '...' : name,
           emoji: ingredientEmoji(name),
           cal: nuts.cal || 0, protein: nuts.protein || 0,
-          carbs: nuts.carbs || 0, fat: nuts.fat || 0,
+          carbs: nuts.carbs || 0, fat: nuts.fat || 0, fiber: nuts.fiber || 0,
           serving: f.servingSize ? `${f.servingSize}${f.servingSizeUnit || 'g'}` : 'per 100g',
           source: 'usda', brand: f.brandName || '',
         });
@@ -6967,6 +6968,7 @@ async function searchAPIs(query) {
         const protein = Math.round(n.proteins_serving || n.proteins_100g || 0);
         const carbs = Math.round(n.carbohydrates_serving || n.carbohydrates_100g || 0);
         const fat = Math.round(n.fat_serving || n.fat_100g || 0);
+        const fiber = Math.round(n.fiber_serving || n.fiber_100g || 0);
         if (!cal && !protein) return;
         if (cal > 5000) return; // bad data
         const name = p.product_name || '';
@@ -6975,7 +6977,7 @@ async function searchAPIs(query) {
         results.push({
           name: name.length > 50 ? name.substring(0, 47) + '...' : name,
           emoji: '📦',
-          cal, protein, carbs, fat,
+          cal, protein, carbs, fat, fiber,
           serving: p.serving_size || 'per 100g',
           source: 'off', brand: p.brands || '',
         });
@@ -7019,7 +7021,7 @@ function addSearchResultNew(idx) {
   if (!f) return;
   const searchMeal = {
     name: f.name + (f.brand ? ` (${f.brand})` : ''),
-    calories: f.cal, protein: f.protein, carbs: f.carbs, fat: f.fat,
+    calories: f.cal, protein: f.protein, carbs: f.carbs, fat: f.fat, fiber: f.fiber || 0,
     description: f.serving,
     tags: [], category: 'savory',
     time: new Date().toISOString(),
@@ -7226,7 +7228,7 @@ function barcodeAddToLog(product) {
   const barcodeMeal = {
     name: product.name + (product.brand ? ` (${product.brand})` : ''),
     calories: product.calories, protein: product.protein,
-    carbs: product.carbs, fat: product.fat,
+    carbs: product.carbs, fat: product.fat, fiber: product.fiber || 0,
     description: `Per ${product.servingSize}`,
     tags: [], category: 'savory',
     time: new Date().toISOString(),
