@@ -927,6 +927,11 @@ body {
 .suggestion-cal { font-size: 20px; font-weight: 200; color: var(--gold); }
 .suggestion-cal-unit { font-size: 9px; font-weight: 400; letter-spacing: .12em; color: var(--ink-3); }
 .suggestion-macros { font-size: 10px; color: var(--ink-3); letter-spacing: .04em; text-align: right; }
+/* Super meal glow */
+.super-meal { box-shadow: 0 0 18px rgba(74,222,128,.12), 0 0 4px rgba(74,222,128,.06); border-color: rgba(74,222,128,.2) !important; }
+.super-meal::before { content: ''; position: absolute; inset: -1px; background: linear-gradient(135deg, rgba(74,222,128,.06) 0%, transparent 50%, rgba(201,169,110,.04) 100%); pointer-events: none; z-index: 0; }
+@keyframes super-pulse { 0%,100% { box-shadow: 0 0 18px rgba(74,222,128,.12), 0 0 4px rgba(74,222,128,.06); } 50% { box-shadow: 0 0 24px rgba(74,222,128,.18), 0 0 6px rgba(74,222,128,.1); } }
+.super-meal { animation: super-pulse 3s ease-in-out infinite; }
 .suggestions-loading { display: flex; align-items: center; justify-content: center; height: 190px; color: var(--muted); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; }
 .suggestions-loading .spin { width: 16px; height: 16px; border: 1px solid var(--dim); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; margin-right: 10px; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -953,7 +958,7 @@ body {
   position: fixed; inset: 0; z-index: 300;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   opacity: 0; pointer-events: none; transition: opacity .3s ease;
-  padding: 40px 28px; overflow: hidden;
+  padding: 40px 28px 80px; overflow: hidden;
 }
 .scan-overlay.open { opacity: 1; pointer-events: all; }
 .scan-photo-bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(30px) brightness(.3) saturate(.6); transform: scale(1.1); z-index: 0; }
@@ -961,7 +966,7 @@ body {
 .scan-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(5,6,11,.4) 0%, rgba(5,6,11,.85) 70%, rgba(5,6,11,.95) 100%); z-index: 1; }
 .scan-close { position: absolute; top: calc(var(--safe-top) + 14px); left: 20px; font-size: 12px; font-weight: 400; letter-spacing: .15em; color: var(--ink-2); background: none; border: none; cursor: pointer; padding: 8px 4px; z-index: 10; }
 .scan-ai-tag { position: absolute; top: calc(var(--safe-top) + 16px); right: 20px; font-size: 9px; font-weight: 500; letter-spacing: .3em; text-transform: uppercase; color: var(--gold); z-index: 10; }
-#scanBody { position: relative; z-index: 5; width: 100%; }
+#scanBody { position: relative; z-index: 5; width: 100%; max-height: 100%; overflow-y: auto; }
 .scan-processing { display: flex; flex-direction: column; align-items: center; gap: 20px; }
 .scan-processing .spin-large { width: 48px; height: 48px; border: 1px solid rgba(255,255,255,.1); border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
 .scan-processing-label { font-size: 11px; font-weight: 400; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-2); }
@@ -1122,7 +1127,7 @@ body {
 .typing-dots span:nth-child(2) { animation-delay: .15s; }
 .typing-dots span:nth-child(3) { animation-delay: .3s; }
 @keyframes typing-bounce { 0%, 100% { opacity: .3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
-.coach-input-bar { padding: 12px 16px calc(var(--safe-bottom) + 14px); border-top: 1px solid var(--rule); display: flex; gap: 10px; background: var(--bg); }
+.coach-input-bar { padding: 12px 16px calc(var(--safe-bottom) + 68px); border-top: 1px solid var(--rule); display: flex; gap: 10px; background: var(--bg); }
 .coach-input { flex: 1; background: var(--panel); border: 1px solid var(--rule); color: var(--ink); font-family: var(--sans); font-size: 14px; font-weight: 300; letter-spacing: .02em; padding: 12px 16px; outline: none; transition: border-color .2s ease; border-radius: 0; -webkit-appearance: none; }
 .coach-input::placeholder { color: var(--muted); }
 .coach-input:focus { border-color: var(--gold-border); }
@@ -1880,7 +1885,7 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
   text-transform: uppercase; color: var(--ink-3);
 }
 .barcode-result {
-  padding: 0 20px calc(var(--safe-bottom) + 20px);
+  padding: 0 20px calc(var(--safe-bottom) + 72px);
   max-height: 40vh; overflow-y: auto;
 }
 .barcode-product {
@@ -3161,6 +3166,24 @@ function renderTitle() {
   if (el.textContent !== title) el.textContent = title;
 }
 
+// ── Super Meal Detection ──
+const SUPERFOODS = ['acai','goji','chia','quinoa','kale','spinach','salmon','blueberr','avocado','sweet potato','turmeric','matcha','edamame','lentil','sardine','broccoli','flaxseed','hemp','spirulina','moringa','wheatgrass','pomegranate','bone broth','tempeh','kimchi','sauerkraut','miso','greek yogurt','cottage cheese'];
+function isSuperMeal(meal) {
+  const cal = meal.calories || meal.cal || 0;
+  const prot = meal.protein || 0;
+  if (cal <= 0) return false;
+  // High protein efficiency: >0.08g protein per calorie (e.g. 30g P / 350 cal)
+  if (prot > 0 && prot / cal >= 0.08) return true;
+  // Contains a superfood
+  const name = (meal.name || '').toLowerCase();
+  const desc = (meal.description || meal.one_liner || '').toLowerCase();
+  const text = name + ' ' + desc;
+  for (const sf of SUPERFOODS) {
+    if (text.includes(sf)) return true;
+  }
+  return false;
+}
+
 // ── Date-keyed localStorage ──
 function todayKey() {
   const d = new Date();
@@ -3987,7 +4010,8 @@ function renderPantrySuggestions() {
     const liner = s.one_liner || '';
     const uses = s.uses ? `<div class="suggestion-uses">Uses: ${s.uses.join(', ')}</div>` : '';
     const needs = s.needs && s.needs.length ? `<div class="suggestion-needs">+ ${s.needs.join(', ')}</div>` : '';
-    return `<div class="suggestion-card" data-sug-idx="${i}">
+    const superCls = isSuperMeal(s) ? ' super-meal' : '';
+    return `<div class="suggestion-card${superCls}" data-sug-idx="${i}">
       <div class="suggestion-tag ${cls}"><span class="tag-dot"></span> ${tag}</div>
       <div class="suggestion-name">${s.name}</div>
       ${liner ? `<div class="suggestion-liner">${liner}</div>` : ''}
@@ -4051,8 +4075,9 @@ function renderLog() {
   if (!state.meals.length) { list.innerHTML = '<div class="log-empty">No meals logged yet — scan your first meal</div>'; return; }
   list.innerHTML = state.meals.map((m,i) => {
     const t = new Date(m.time), h = t.getHours(), mn = t.getMinutes().toString().padStart(2,'0');
+    const _super = isSuperMeal(m) ? ' super-meal' : '';
     return `<div class="log-entry-wrap" data-idx="${i}">
-      <div class="log-entry slide-in" style="animation-delay:${i*.1}s" onclick="showDetail(${i})">
+      <div class="log-entry slide-in${_super}" style="animation-delay:${i*.1}s" onclick="showDetail(${i})">
         <div class="log-time-col"><div class="log-time">${h%12||12}:${mn}</div><div class="log-type">${h>=12?'PM':'AM'}</div></div>
         <div class="log-details"><div class="log-name">${m.name}</div>
           <div class="log-macros"><span><span class="dot dot-p"></span> ${m.protein}g P</span><span><span class="dot dot-c"></span> ${m.carbs}g C</span><span><span class="dot dot-f"></span> ${m.fat}g F</span></div>
@@ -5209,7 +5234,8 @@ function renderSuggestions() {
 
   track.innerHTML = filtered.map((s,i) => {
     const tag = (s.tags&&s.tags[0])||'BALANCED', cls = getTagClass(tag), liner = s.one_liner||s.description||'';
-    return `<div class="suggestion-card" data-sug-idx="${i}">
+    const superCls = isSuperMeal(s) ? ' super-meal' : '';
+    return `<div class="suggestion-card${superCls}" data-sug-idx="${i}">
       <div class="suggestion-tag ${cls}"><span class="tag-dot"></span> ${tag}</div>
       <div class="suggestion-name">${s.name}</div>
       ${liner ? `<div class="suggestion-liner">${liner}</div>` : ''}
