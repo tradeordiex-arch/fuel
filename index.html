@@ -3143,7 +3143,11 @@ function computeTitle() {
   // Daily modifier
   const modifier = computeModifier(totals, mealCount, state.water);
 
-  return `${modifier} ${rank}`.toUpperCase();
+  // "Super" prefix if any meal today qualifies
+  const hasSuper = (state.meals || []).some(m => isSuperMeal(m));
+  const superTag = hasSuper ? 'SUPER ' : '';
+
+  return `${modifier} ${superTag}${rank}`.toUpperCase();
 }
 
 function rebuildWeekXp() {

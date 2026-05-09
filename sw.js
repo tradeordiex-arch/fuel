@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fuel-v20260510m';
+const CACHE_NAME = 'fuel-v20260510n';
 const PRECACHE = [
   '/index.html',
   '/manifest.json',
