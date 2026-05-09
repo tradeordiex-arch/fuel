@@ -4476,6 +4476,7 @@ function renderScanResult(data, thumbSrc) {
       _baseProt: ing.protein || 0,
       _baseCarbs: ing.carbs || 0,
       _baseFat: ing.fat || 0,
+      _baseFiber: ing.fiber || 0,
     }));
   } else {
     scanIngredients = [{
@@ -4484,6 +4485,7 @@ function renderScanResult(data, thumbSrc) {
       carbs: data.carbs || 0, fat: data.fat || 0, fiber: data.fiber || 0,
       _baseCal: data.calories || 0, _baseProt: data.protein || 0,
       _baseCarbs: data.carbs || 0, _baseFat: data.fat || 0,
+      _baseFiber: data.fiber || 0,
     }];
   }
 
@@ -4556,8 +4558,9 @@ function getIngTotals() {
       protein: a.protein + Math.round(ing._baseProt * m),
       carbs: a.carbs + Math.round(ing._baseCarbs * m),
       fat: a.fat + Math.round(ing._baseFat * m),
+      fiber: a.fiber + Math.round((ing._baseFiber || 0) * m),
     };
-  }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+  }, { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
 }
 
 function renderIngredientEditor(thumbSrc) {
@@ -4793,6 +4796,7 @@ function replaceIngredient(idx, altIdx) {
     _baseProt: alt.protein || 0,
     _baseCarbs: alt.carbs || 0,
     _baseFat: alt.fat || 0,
+    _baseFiber: alt.fiber || 0,
     _alternatives: null,
   };
 
@@ -4827,13 +4831,14 @@ async function addIngredientManual() {
       _baseProt: data.protein || 0,
       _baseCarbs: data.carbs || 0,
       _baseFat: data.fat || 0,
+      _baseFiber: data.fiber || 0,
     });
   } catch (e) {
     scanIngredients.push({
       id: scanIngredients.length,
       name: text, emoji: '🥘', portionPct: 0.5,
       calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0,
-      _baseCal: 0, _baseProt: 0, _baseCarbs: 0, _baseFat: 0,
+      _baseCal: 0, _baseProt: 0, _baseCarbs: 0, _baseFat: 0, _baseFiber: 0,
     });
   }
 
