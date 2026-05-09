@@ -3,13 +3,16 @@ FUEL Health Dashboard — Local API Server
 Serves static files + proxies to Claude Haiku for:
   - /api/scan   (image → food identification)
   - /api/chat   (health coach conversation)
+  - /api/lookup (3-tier ingredient lookup)
 """
 
 import json, os, sys, base64
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
+import urllib.request
+import urllib.parse
 
-# ── Load API key ──
+# ── Load env ──
 # Check local .env first, then NQ Data config as fallback
 for env_path in [
     Path(__file__).resolve().parent / ".env",
@@ -17,8 +20,10 @@ for env_path in [
 ]:
     if env_path.exists():
         for line in env_path.read_text(encoding="utf-8").splitlines():
-            if line.strip().startswith("ANTHROPIC_API_KEY="):
-                os.environ["ANTHROPIC_API_KEY"] = line.split("=", 1)[1].strip()
+            line = line.strip()
+            if "=" in line and not line.startswith("#"):
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip())
         break
 
 import anthropic
@@ -26,12 +31,183 @@ import anthropic
 client = anthropic.Anthropic()
 MODEL = "claude-haiku-4-5-20251001"
 
+# ── Supabase config ──
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://shcemayremkowwmzuxgd.supabase.co")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+
+
+def supabase_query(path: str, method: str = "GET", body: dict = None) -> dict | list | None:
+    """Direct Supabase REST API call using service role key."""
+    if not SUPABASE_SERVICE_KEY:
+        return None
+    url = f"{SUPABASE_URL}/rest/v1/{path}"
+    headers = {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation",
+    }
+    data = json.dumps(body).encode() if body else None
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.loads(resp.read().decode())
+    except Exception as e:
+        print(f"[Supabase] {method} {path} failed: {e}")
+        return None
+
+
+# ═══════════════════════════════════════
+# 3-TIER INGREDIENT LOOKUP
+# ═══════════════════════════════════════
+def lookup_ingredient(query: str) -> dict:
+    """
+    Tier 1: FUEL verified DB (Supabase ingredients table)
+    Tier 2: AI generation (Haiku)
+    Result from Tier 2 → written to staging table for review
+    """
+    normalized = query.strip().lower()
+    if not normalized:
+        return {"error": "empty query"}
+
+    # ── Tier 1: Supabase verified ingredients ──
+    # Try exact match first, then fuzzy
+    safe_q = urllib.parse.quote(normalized)
+    result = supabase_query(f"ingredients?name_normalized=eq.{safe_q}&limit=1")
+    if result and len(result) > 0:
+        row = result[0]
+        return {
+            "name": row["name"], "emoji": row.get("emoji", "🥘"),
+            "calories": row["calories"], "protein": row["protein"],
+            "carbs": row["carbs"], "fat": row["fat"],
+            "fiber": row.get("fiber", 0), "sugar": row.get("sugar", 0),
+            "serving": row["serving_desc"],
+            "serving_grams": row.get("serving_grams"),
+            "category": row.get("category", ""),
+            "source": "verified",
+        }
+
+    # Try alias match
+    result = supabase_query(f"ingredients?aliases=cs.{{{safe_q}}}&limit=1")
+    if result and len(result) > 0:
+        row = result[0]
+        return {
+            "name": row["name"], "emoji": row.get("emoji", "🥘"),
+            "calories": row["calories"], "protein": row["protein"],
+            "carbs": row["carbs"], "fat": row["fat"],
+            "fiber": row.get("fiber", 0), "sugar": row.get("sugar", 0),
+            "serving": row["serving_desc"],
+            "serving_grams": row.get("serving_grams"),
+            "category": row.get("category", ""),
+            "source": "verified",
+        }
+
+    # Try full-text search
+    words = normalized.replace("'", "").split()
+    ts_query = " & ".join(words)
+    safe_ts = urllib.parse.quote(ts_query)
+    result = supabase_query(f"ingredients?search_vector=fts.{safe_ts}&limit=1")
+    if result and len(result) > 0:
+        row = result[0]
+        return {
+            "name": row["name"], "emoji": row.get("emoji", "🥘"),
+            "calories": row["calories"], "protein": row["protein"],
+            "carbs": row["carbs"], "fat": row["fat"],
+            "fiber": row.get("fiber", 0), "sugar": row.get("sugar", 0),
+            "serving": row["serving_desc"],
+            "serving_grams": row.get("serving_grams"),
+            "category": row.get("category", ""),
+            "source": "verified",
+        }
+
+    # ── Check staging (maybe we already AI'd this) ──
+    result = supabase_query(f"ingredient_staging?name_normalized=eq.{safe_q}&limit=1")
+    if result and len(result) > 0:
+        row = result[0]
+        # Bump lookup count
+        supabase_query(
+            f"ingredient_staging?id=eq.{row['id']}",
+            method="PATCH",
+            body={"lookup_count": row.get("lookup_count", 1) + 1, "last_looked_up": "now()"}
+        )
+        return {
+            "name": row["name"], "emoji": row.get("emoji", "🥘"),
+            "calories": row["calories"], "protein": row["protein"],
+            "carbs": row["carbs"], "fat": row["fat"],
+            "fiber": row.get("fiber", 0), "sugar": row.get("sugar", 0),
+            "serving": row["serving_desc"],
+            "category": row.get("category", ""),
+            "source": "ai_cached",
+        }
+
+    # ── Tier 2: AI generation ──
+    try:
+        resp = client.messages.create(
+            model=MODEL,
+            max_tokens=200,
+            messages=[{
+                "role": "user",
+                "content": (
+                    f'What are the nutrition facts for "{query}"? '
+                    "Return ONLY valid JSON, no markdown:\n"
+                    '{"name":"Proper Name","emoji":"🥘","calories":000,'
+                    '"protein":00,"carbs":00,"fat":00,"fiber":00,"sugar":00,'
+                    '"sodium":00,"serving":"1 medium","serving_grams":000,'
+                    '"category":"protein|vegetable|fruit|grain|dairy|healthy_fat|legume|beverage|condiment",'
+                    '"storage":"fridge|freezer|pantry","shelf_days":7}\n'
+                    "Use standard serving size. Be accurate — this is for a nutrition tracking app."
+                ),
+            }],
+        )
+        raw = resp.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        data = json.loads(raw)
+
+        # Write to staging table
+        staging_row = {
+            "name": data.get("name", query),
+            "name_normalized": normalized,
+            "emoji": data.get("emoji", "🥘"),
+            "calories": data.get("calories", 0),
+            "protein": data.get("protein", 0),
+            "carbs": data.get("carbs", 0),
+            "fat": data.get("fat", 0),
+            "fiber": data.get("fiber", 0),
+            "sugar": data.get("sugar", 0),
+            "sodium": data.get("sodium", 0),
+            "serving_desc": data.get("serving", "1 serving"),
+            "serving_grams": data.get("serving_grams"),
+            "category": data.get("category", ""),
+            "storage": data.get("storage", "fridge"),
+            "source": "ai",
+        }
+        supabase_query("ingredient_staging", method="POST", body=staging_row)
+
+        return {
+            "name": data.get("name", query),
+            "emoji": data.get("emoji", "🥘"),
+            "calories": data.get("calories", 0),
+            "protein": data.get("protein", 0),
+            "carbs": data.get("carbs", 0),
+            "fat": data.get("fat", 0),
+            "fiber": data.get("fiber", 0),
+            "sugar": data.get("sugar", 0),
+            "serving": data.get("serving", "1 serving"),
+            "serving_grams": data.get("serving_grams"),
+            "category": data.get("category", ""),
+            "source": "ai",
+        }
+    except Exception as e:
+        print(f"[Lookup AI] failed: {e}")
+        return {"error": str(e)}
+
 
 def scan_image(image_b64: str, media_type: str = "image/jpeg") -> dict:
-    """Send image to Haiku for food identification."""
+    """Send image to Haiku for food identification with ingredient breakdown."""
     resp = client.messages.create(
         model=MODEL,
-        max_tokens=800,
+        max_tokens=1200,
         messages=[{
             "role": "user",
             "content": [
@@ -46,13 +222,41 @@ def scan_image(image_b64: str, media_type: str = "image/jpeg") -> dict:
                 {
                     "type": "text",
                     "text": (
-                        "Identify the food in this image. Return ONLY valid JSON, no markdown:\n"
-                        '{"name": "Meal Name", "description": "brief ingredient list", '
-                        '"calories": 000, "protein": 00, "carbs": 00, "fat": 00, "fiber": 00, '
-                        '"category": "savory|sweet", "tags": ["HIGH PROTEIN", ...], '
-                        '"health_note": "one-sentence nutritional insight"}\n'
-                        "Be accurate with calorie estimates. Use typical serving sizes. "
-                        "Tags can be: HIGH PROTEIN, LOW CARB, HIGH FIBER, RICH IN GREENS, "
+                        "Identify the food in this image.\n\n"
+                        "STEP 1 — PACKAGED PRODUCT CHECK:\n"
+                        "If this is a recognizable brand-name packaged product (frozen meal, snack bar, "
+                        "canned food, boxed item, fast food chain item, etc.), return it as a SINGLE item "
+                        "with the product name and brand. Use the label nutrition facts (per serving). "
+                        "Set \"packaged\": true and do NOT decompose into ingredients.\n\n"
+                        "STEP 2 — HOMEMADE / RESTAURANT / UNPACKAGED FOOD:\n"
+                        "If this is a homemade meal, restaurant plate, or unpackaged food, break it down "
+                        "into individual SUBSTANTIAL ingredients. Set \"packaged\": false.\n\n"
+                        "Return ONLY valid JSON, no markdown:\n"
+                        '{"name": "Meal or Product Name", "description": "brief description", '
+                        '"category": "savory|sweet", "packaged": true|false, '
+                        '"tags": ["HIGH PROTEIN", ...], '
+                        '"health_note": "one-sentence nutritional insight", '
+                        '"ingredients": [\n'
+                        '  {"name": "Ingredient", "emoji": "🥩", '
+                        '"calories": 000, "protein": 00, "carbs": 00, "fat": 00, "fiber": 00}\n'
+                        ']}\n\n'
+                        "Rules:\n"
+                        "- For PACKAGED products (packaged=true): ingredients array has ONE item — the product itself. "
+                        "Use the brand + product name. Macros from label nutrition per serving.\n"
+                        "- For HOMEMADE/RESTAURANT (packaged=false): ingredients array has 3-7 items. "
+                        "List each substantial ingredient separately (meat, grain, vegetables, cheese, sauce, toppings).\n"
+                        "- ONLY include ingredients with 10+ calories. Skip salt, pepper, garlic, herbs, spices.\n"
+                        "- Macros are for the estimated portion visible in the image\n"
+                        "- Use accurate per-ingredient macros, not rough splits of a total\n"
+                        "- emoji should be a single food emoji that represents the ingredient\n\n"
+                        "Packaged example: {\"name\": \"El Monterey Bean & Cheese Burrito\", \"packaged\": true, "
+                        "\"ingredients\": [{\"name\": \"El Monterey Bean & Cheese Burrito\", \"emoji\": \"🌯\", "
+                        "\"calories\": 280, \"protein\": 9, \"carbs\": 38, \"fat\": 10, \"fiber\": 3}]}\n\n"
+                        "Homemade example: {\"name\": \"Burger\", \"packaged\": false, "
+                        "\"ingredients\": [{\"name\": \"Beef patty\", \"emoji\": \"🥩\", \"calories\": 250, \"protein\": 20, \"carbs\": 0, \"fat\": 18, \"fiber\": 0}, "
+                        "{\"name\": \"Brioche bun\", \"emoji\": \"🍞\", \"calories\": 200, \"protein\": 5, \"carbs\": 36, \"fat\": 4, \"fiber\": 1}, "
+                        "{\"name\": \"Cheddar cheese\", \"emoji\": \"🧀\", \"calories\": 110, \"protein\": 7, \"carbs\": 0, \"fat\": 9, \"fiber\": 0}]}\n\n"
+                        "Tags: HIGH PROTEIN, LOW CARB, HIGH FIBER, RICH IN GREENS, "
                         "BALANCED, LIGHT, WHOLE GRAIN, HEALTHY FATS."
                     ),
                 },
@@ -66,39 +270,94 @@ def scan_image(image_b64: str, media_type: str = "image/jpeg") -> dict:
         if text.endswith("```"):
             text = text[:-3]
         text = text.strip()
-    return json.loads(text)
+    result = json.loads(text)
+
+    # If AI didn't return ingredients and it's not a packaged product, decompose via a follow-up call
+    if ("ingredients" not in result or not result["ingredients"]) and not result.get("packaged"):
+        try:
+            decomp = client.messages.create(
+                model=MODEL,
+                max_tokens=800,
+                messages=[{
+                    "role": "user",
+                    "content": (
+                        f"Break down \"{result.get('name', 'this meal')}\" ({result.get('description', '')}) "
+                        f"into its substantial ingredients (10+ calories each). "
+                        f"Total macros: {result.get('calories', 0)} cal, {result.get('protein', 0)}g protein, "
+                        f"{result.get('carbs', 0)}g carbs, {result.get('fat', 0)}g fat.\n"
+                        "Return ONLY a JSON array, no markdown:\n"
+                        '[{"name": "Ingredient", "emoji": "🥩", '
+                        '"calories": 000, "protein": 00, "carbs": 00, "fat": 00, "fiber": 00}]\n'
+                        "Split the total macros accurately across ingredients. 3-7 items."
+                    ),
+                }],
+            )
+            dt = decomp.content[0].text.strip()
+            if dt.startswith("```"):
+                dt = dt.split("\n", 1)[1] if "\n" in dt else dt[3:]
+                if dt.endswith("```"):
+                    dt = dt[:-3]
+                dt = dt.strip()
+            result["ingredients"] = json.loads(dt)
+        except Exception:
+            pass  # Fall through with no ingredients — frontend handles gracefully
+
+    # Compute totals from ingredients
+    if "ingredients" in result and result["ingredients"]:
+        result["calories"] = sum(i.get("calories", 0) for i in result["ingredients"])
+        result["protein"] = sum(i.get("protein", 0) for i in result["ingredients"])
+        result["carbs"] = sum(i.get("carbs", 0) for i in result["ingredients"])
+        result["fat"] = sum(i.get("fat", 0) for i in result["ingredients"])
+        result["fiber"] = sum(i.get("fiber", 0) for i in result["ingredients"])
+
+    return result
 
 
 def chat_coach(messages: list, daily_state: dict) -> str:
     """Health coach conversation with context. Can return actions."""
     system = (
-        "You are FUEL AI, a premium health coach inside a calorie-tracking app. "
-        "You are concise, warm, and evidence-based. Never preachy. "
-        "Speak like a knowledgeable friend, not a doctor. Keep responses under 3 sentences "
-        "unless the user asks for detail.\n\n"
+        "You are FUEL AI, a premium health coach inside a calorie-tracking app.\n\n"
+        "COMMUNICATION STYLE — follow these rules exactly:\n"
+        "1. Put a BLANK LINE between every paragraph. This is mandatory.\n"
+        "2. Each paragraph is 1-2 sentences MAX. Never more.\n"
+        "3. Lead with the key number or answer. Not the reasoning.\n"
+        "4. Use **bold** for important numbers and key takeaways.\n"
+        "5. Never write more than 5 paragraphs total.\n"
+        "6. For lists, use bullet points with line breaks between them.\n"
+        "7. Be warm but direct. Sharp friend, not a doctor. Never preachy.\n\n"
+        "EXAMPLE of correct format:\n"
+        "You've got **489 cal** and **71g protein** left today.\n\n"
+        "Protein is your biggest gap right now. Lean into it at dinner.\n\n"
+        "A grilled chicken breast with veggies would cover it — about **350 cal, 40g protein**.\n\n"
+        "Go easy on carbs and fat, you're nearly maxed on both.\n\n"
         f"User's full state: {json.dumps(daily_state)}\n\n"
-        "You have FULL ACCESS to the user's profile, goals, stats, and intake history.\n\n"
+        "You have FULL ACCESS to:\n"
+        "- Profile: name, age, sex, weight, height, goal, dietary restrictions, activity level\n"
+        "- Today: every meal logged (with full macros), calories/protein/carbs/fat consumed and remaining, water intake\n"
+        "- Pantry: what ingredients the user has at home RIGHT NOW — suggest meals from these when relevant\n"
+        "- Recent history: last 7 days of meals, scores, and water — use this to spot patterns, praise streaks, and give context-aware advice\n"
+        "- Streak: how many consecutive days they've logged\n\n"
+        "USE the pantry and history actively. If someone asks 'what should I eat?', check their pantry and suggest something they can actually make.\n"
+        "If you notice patterns in their history (e.g., low protein every day, skipping breakfast), mention it.\n\n"
         "IMPORTANT — ACTION COMMANDS:\n"
-        "If the user asks you to change their goals, targets, weight, name, or any profile setting, "
-        "include a JSON action block at the END of your response in this exact format:\n"
-        "<!--ACTION:{\"type\":\"update_profile\",\"changes\":{\"field\":\"value\"}}-->\n\n"
-        "Valid fields you can change:\n"
-        "- calories (daily calorie target, number)\n"
-        "- protein (daily protein target in grams, number)\n"
-        "- carbs (daily carbs target in grams, number)\n"
-        "- fat (daily fat target in grams, number)\n"
-        "- weight (user weight in lbs, number)\n"
-        "- goal (\"lose\", \"maintain\", or \"build\")\n"
-        "- name (user's name, string)\n"
-        "- water_goal (daily water glasses target, number)\n\n"
-        "Examples:\n"
-        "User: 'Set my protein to 160g' → 'Done — protein target updated to 160g.<!--ACTION:{\"type\":\"update_profile\",\"changes\":{\"protein\":160}}-->'\n"
-        "User: 'I want to cut to 1800 calories' → 'Got it — daily target set to 1,800 cal.<!--ACTION:{\"type\":\"update_profile\",\"changes\":{\"calories\":1800}}-->'\n"
-        "User: 'Change my goal to bulking' → 'Switched to build mode.<!--ACTION:{\"type\":\"update_profile\",\"changes\":{\"goal\":\"build\"}}-->'\n"
-        "User: 'I weigh 180 now' → 'Updated — 180 lbs logged.<!--ACTION:{\"type\":\"update_profile\",\"changes\":{\"weight\":180}}-->'\n\n"
-        "You can change multiple fields at once: {\"calories\":2200,\"protein\":180,\"goal\":\"build\"}\n"
-        "NEVER show the ACTION tag in your visible text. Put it at the very end.\n"
-        "If the user is NOT asking to change anything, just respond normally with no ACTION tag.\n\n"
+        "You can take actions by including a hidden JSON block at the END of your response.\n"
+        "Format: <!--ACTION:{...}-->\n"
+        "NEVER show the ACTION tag in your visible text. Put it at the very end.\n\n"
+        "ACTION TYPE 1 — Update Profile:\n"
+        "<!--ACTION:{\"type\":\"update_profile\",\"changes\":{\"field\":\"value\"}}-->\n"
+        "Fields: calories, protein, carbs, fat (numbers), weight (lbs), goal (lose/maintain/build), name (string), water_goal (number)\n"
+        "Example: 'Set my protein to 160g' → '...<!--ACTION:{\"type\":\"update_profile\",\"changes\":{\"protein\":160}}-->'\n\n"
+        "ACTION TYPE 2 — Add to Cart (grocery shopping list):\n"
+        "When the user asks to add a meal or recipe to their cart, add all its ingredients.\n"
+        "<!--ACTION:{\"type\":\"add_to_cart\",\"meal\":\"Meal Name\",\"items\":[{\"name\":\"Chicken Breast\",\"emoji\":\"🍗\",\"qty\":\"1 lb\",\"category\":\"protein\"},{\"name\":\"Broccoli\",\"emoji\":\"🥦\",\"qty\":\"2 cups\",\"category\":\"produce\"}]}-->\n"
+        "Include EVERY ingredient needed to make the meal from scratch. Use realistic grocery quantities.\n"
+        "Categories: protein, produce, dairy, grain, pantry, spice, oil, sauce\n"
+        "Example: 'Add broccoli cheese casserole to cart' → 'Added to your cart! ...<!--ACTION:{\"type\":\"add_to_cart\",\"meal\":\"Broccoli Cheese Casserole\",\"items\":[...]}-->'\n\n"
+        "ACTION TYPE 3 — Add to Pantry:\n"
+        "When the user says they bought something or have something at home.\n"
+        "<!--ACTION:{\"type\":\"add_to_pantry\",\"items\":[\"chicken\",\"rice\",\"broccoli\"]}-->\n"
+        "Example: 'I just bought eggs and milk' → 'Nice, added to your pantry.<!--ACTION:{\"type\":\"add_to_pantry\",\"items\":[\"eggs\",\"milk\"]}-->'\n\n"
+        "If the user is NOT asking to change anything or add anything, just respond normally with no ACTION tag.\n\n"
         "If they ask about their stats, goals, or profile, reference the data above directly.\n"
         "If they ask about meals, suggest specific foods with calorie/macro estimates.\n"
         "Refer to their remaining calories/macros when relevant."
@@ -112,8 +371,44 @@ def chat_coach(messages: list, daily_state: dict) -> str:
     return resp.content[0].text.strip()
 
 
-def suggest_meals(remaining_cal: int, remaining_protein: int, flavor: str = "all", goal_focus: str = "", diets: list = None) -> list:
-    """Generate meal suggestions based on remaining goals."""
+def generate_briefing(snapshot: dict) -> dict:
+    """Generate a personalized daily briefing — headline + detail."""
+    system = (
+        "You are a sharp, warm nutrition coach writing a daily briefing for a health app.\n\n"
+        "RULES:\n"
+        "- Return ONLY valid JSON: {\"headline\": \"...\", \"detail\": \"...\"}\n"
+        "- headline: ONE sentence, max 120 chars. Truncatable with ellipsis. Actionable and specific.\n"
+        "- detail: 1-2 follow-up sentences with concrete advice. Max 200 chars.\n"
+        "- Reference specific numbers, meal names, and patterns from the data.\n"
+        "- Tone: direct, encouraging, never preachy. Like a friend who happens to know nutrition.\n"
+        "- If the user closed a gap (e.g. hit protein after being short), celebrate it.\n"
+        "- If there's a gap, give a specific fix — name a food, not a category.\n"
+        "- Never say 'consider' or 'you might want to'. Just say what to do.\n"
+        "- Time-aware: morning = plan ahead, noon = adjust course, evening = reflect + tomorrow.\n"
+        "- No emojis. No exclamation marks. Confident and calm.\n"
+    )
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=200,
+        system=system,
+        messages=[{"role": "user", "content": json.dumps(snapshot)}],
+    )
+    try:
+        raw = resp.content[0].text.strip()
+        # Handle potential markdown code block wrapping
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        return json.loads(raw)
+    except (json.JSONDecodeError, IndexError):
+        return {"headline": "", "detail": ""}
+
+
+def suggest_meals(remaining_cal: int, remaining_protein: int, flavor: str = "all",
+                   goal_focus: str = "", diets: list = None,
+                   remaining_carbs: int = 0, remaining_fat: int = 0,
+                   eaten_today: list = None, time_of_day: str = "",
+                   pantry: list = None) -> list:
+    """Generate meal suggestions based on remaining goals + context."""
     focus_instruction = ""
     if goal_focus == "protein":
         focus_instruction = "IMPORTANT: Focus heavily on HIGH PROTEIN options (30g+ protein per serving). Every suggestion must be protein-rich. "
@@ -126,6 +421,37 @@ def suggest_meals(remaining_cal: int, remaining_protein: int, flavor: str = "all
     if diets and len(diets) > 0:
         diet_instruction = f"DIETARY RESTRICTIONS: All suggestions MUST be {', '.join(diets)}. Do not include any ingredients that violate these restrictions. "
 
+    # Context-aware instructions
+    context_parts = []
+
+    # Macro balance
+    if remaining_fat and remaining_fat < 10:
+        context_parts.append("User is nearly maxed on fat — suggest LOW FAT options, avoid fried/oily/cheesy dishes.")
+    if remaining_carbs and remaining_carbs < 30:
+        context_parts.append("User is nearly maxed on carbs — suggest LOW CARB options, avoid rice/bread/pasta-heavy dishes.")
+
+    # Avoid repetition
+    if eaten_today and len(eaten_today) > 0:
+        context_parts.append(f"Already eaten today: {', '.join(eaten_today)}. Do NOT suggest similar meals — offer variety in protein source, cuisine, and cooking style.")
+
+    # Time-appropriate
+    time_hints = {
+        "late_night": "It's late — suggest LIGHT options only: herbal tea, small snacks, yogurt, a handful of nuts. Nothing heavy. Keep under 200 cal each.",
+        "breakfast": "Suggest BREAKFAST-appropriate meals: eggs, oatmeal, smoothies, yogurt, toast. No heavy dinners.",
+        "late_morning": "Suggest late morning snacks or light brunch items.",
+        "lunch": "Suggest LUNCH-appropriate meals: salads, wraps, bowls, sandwiches, soups.",
+        "afternoon_snack": "Suggest SNACK-sized options: protein bars, fruit, nuts, yogurt, small bites. Keep portions small (100-300 cal).",
+        "dinner": "Suggest DINNER-appropriate meals: full entrees, proteins with sides, stir-fry, pasta, grilled dishes.",
+    }
+    if time_of_day and time_of_day in time_hints:
+        context_parts.append(time_hints[time_of_day])
+
+    # Pantry awareness
+    if pantry and len(pantry) > 0:
+        context_parts.append(f"User has these ingredients at home: {', '.join(pantry[:15])}. When possible, favor meals they can make from what they have. Mark those with a '🏠' at the start of the one_liner.")
+
+    context_block = "\n".join(context_parts)
+
     resp = client.messages.create(
         model=MODEL,
         max_tokens=1200,
@@ -137,6 +463,7 @@ def suggest_meals(remaining_cal: int, remaining_protein: int, flavor: str = "all
                 f"{'Only ' + flavor + ' options.' if flavor != 'all' else 'Mix of sweet and savory.'}\n"
                 f"{focus_instruction}"
                 f"{diet_instruction}"
+                f"{context_block}\n" if context_block else ""
                 "Return ONLY a JSON array, no markdown:\n"
                 '[{"name": "Meal Name", "calories": 000, "protein": 00, "carbs": 00, '
                 '"fat": 00, "category": "savory|sweet", '
@@ -157,23 +484,39 @@ def suggest_meals(remaining_cal: int, remaining_protein: int, flavor: str = "all
 
 
 def describe_meal(text: str) -> dict:
-    """Text description → structured meal data via Haiku."""
+    """Text description → structured meal data with ingredient breakdown via Haiku."""
     resp = client.messages.create(
         model=MODEL,
-        max_tokens=800,
+        max_tokens=1200,
         messages=[{
             "role": "user",
             "content": (
                 f"The user described a meal they ate: \"{text}\"\n\n"
-                "Identify the food and estimate nutrition for a standard serving. "
+                "STEP 1 — PACKAGED PRODUCT CHECK:\n"
+                "If this is a recognizable brand-name packaged product (frozen meal, snack bar, "
+                "canned food, boxed item, fast food chain item, etc.), return it as a SINGLE item "
+                "with the product name and brand. Use the label nutrition facts (per serving). "
+                "Set \"packaged\": true and do NOT decompose into ingredients.\n\n"
+                "STEP 2 — HOMEMADE / RESTAURANT / UNPACKAGED FOOD:\n"
+                "If this is a homemade meal, restaurant plate, or unpackaged food, break it down "
+                "into individual SUBSTANTIAL ingredients. Set \"packaged\": false.\n\n"
                 "Return ONLY valid JSON, no markdown:\n"
-                '{"name": "Meal Name", "description": "brief ingredient list", '
-                '"calories": 000, "protein": 00, "carbs": 00, "fat": 00, "fiber": 00, '
-                '"category": "savory|sweet", "tags": ["HIGH PROTEIN", ...], '
-                '"health_note": "one-sentence nutritional insight"}\n'
-                "Be accurate with calorie estimates. Use typical serving sizes. "
-                "If the description is vague, make reasonable assumptions and note them "
-                "in the description. Tags: HIGH PROTEIN, LOW CARB, HIGH FIBER, "
+                '{"name": "Meal or Product Name", "description": "brief description", '
+                '"category": "savory|sweet", "packaged": true|false, '
+                '"tags": ["HIGH PROTEIN", ...], '
+                '"health_note": "one-sentence nutritional insight", '
+                '"ingredients": [\n'
+                '  {"name": "Ingredient", "emoji": "🥩", '
+                '"calories": 000, "protein": 00, "carbs": 00, "fat": 00, "fiber": 00}\n'
+                ']}\n\n'
+                "Rules:\n"
+                "- For PACKAGED products (packaged=true): ingredients array has ONE item — the product itself. "
+                "Use the brand + product name. Macros from label nutrition per serving.\n"
+                "- For HOMEMADE/RESTAURANT (packaged=false): ingredients array has 3-7 items.\n"
+                "- Only include ingredients with 10+ calories. Skip salt, pepper, herbs, spices.\n"
+                "- Be accurate with calorie estimates.\n"
+                "- If the description is vague, make reasonable assumptions.\n"
+                "Tags: HIGH PROTEIN, LOW CARB, HIGH FIBER, "
                 "RICH IN GREENS, BALANCED, LIGHT, WHOLE GRAIN, HEALTHY FATS."
             ),
         }],
@@ -184,7 +527,17 @@ def describe_meal(text: str) -> dict:
         if text_out.endswith("```"):
             text_out = text_out[:-3]
         text_out = text_out.strip()
-    return json.loads(text_out)
+    result = json.loads(text_out)
+
+    # Compute totals from ingredients
+    if "ingredients" in result and result["ingredients"]:
+        result["calories"] = sum(i.get("calories", 0) for i in result["ingredients"])
+        result["protein"] = sum(i.get("protein", 0) for i in result["ingredients"])
+        result["carbs"] = sum(i.get("carbs", 0) for i in result["ingredients"])
+        result["fat"] = sum(i.get("fat", 0) for i in result["ingredients"])
+        result["fiber"] = sum(i.get("fiber", 0) for i in result["ingredients"])
+
+    return result
 
 
 def classify_foods(food_list: list) -> dict:
@@ -366,6 +719,34 @@ def get_full_recipe(name: str, description: str = "") -> dict:
     return recipe
 
 
+def suggest_replacements(ingredient_name: str, meal_context: str = "") -> list:
+    """Suggest alternative ingredients for a scanned item."""
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=400,
+        messages=[{
+            "role": "user",
+            "content": (
+                f"The user scanned a meal and wants to replace \"{ingredient_name}\".\n"
+                f"{'Meal context: ' + meal_context if meal_context else ''}\n"
+                "Suggest 4 likely alternatives — common substitutions or things that look similar.\n"
+                "Return ONLY a JSON array, no markdown:\n"
+                '[{"name": "Greek Yogurt", "emoji": "🥛", '
+                '"calories": 00, "protein": 00, "carbs": 00, "fat": 00, "fiber": 00, '
+                '"portion_sizes": {"pinch": "1 tbsp", "light": "1.5 tbsp", "regular": "2 tbsp", "generous": "3 tbsp", "loaded": "4 tbsp"}}]\n'
+                "Macros are for the 'regular' portion size. Be accurate."
+            ),
+        }],
+    )
+    text = resp.content[0].text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+    return json.loads(text)
+
+
 # ── Recipe cache (in-memory, persists for server lifetime) ──
 _recipe_cache = {}
 
@@ -403,6 +784,13 @@ class FuelHandler(SimpleHTTPRequestHandler):
                     _recipe_cache[cache_key] = recipe
                     self._json_response({**recipe, "cached": False})
 
+            elif self.path == "/api/replace-ingredient":
+                alts = suggest_replacements(
+                    body.get("ingredient", ""),
+                    body.get("meal_context", ""),
+                )
+                self._json_response({"alternatives": alts})
+
             elif self.path == "/api/classify":
                 result = classify_foods(body.get("foods", []))
                 self._json_response({"classifications": result})
@@ -419,6 +807,14 @@ class FuelHandler(SimpleHTTPRequestHandler):
                 )
                 self._json_response({"meals": meals})
 
+            elif self.path == "/api/lookup":
+                result = lookup_ingredient(body.get("query", ""))
+                self._json_response(result)
+
+            elif self.path == "/api/briefing":
+                result = generate_briefing(body.get("snapshot", {}))
+                self._json_response(result)
+
             elif self.path == "/api/suggestions":
                 meals = suggest_meals(
                     body.get("remaining_cal", 800),
@@ -426,6 +822,11 @@ class FuelHandler(SimpleHTTPRequestHandler):
                     body.get("flavor", "all"),
                     body.get("goal_focus", ""),
                     body.get("diets", None),
+                    remaining_carbs=body.get("remaining_carbs", 0),
+                    remaining_fat=body.get("remaining_fat", 0),
+                    eaten_today=body.get("eaten_today", None),
+                    time_of_day=body.get("time_of_day", ""),
+                    pantry=body.get("pantry", None),
                 )
                 self._json_response({"meals": meals})
 

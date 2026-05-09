@@ -4209,7 +4209,7 @@ let scanIngredients = []; // working copy of ingredients
 let scanMealMeta = {};    // name, description, tags, etc
 
 function renderScanResult(data, thumbSrc) {
-  scanMealMeta = { name: data.name, description: data.description, health_note: data.health_note, tags: data.tags, category: data.category };
+  scanMealMeta = { name: data.name, description: data.description, health_note: data.health_note, tags: data.tags, category: data.category, packaged: !!data.packaged };
 
   // If API returned ingredients, use them; otherwise create a single-ingredient fallback
   if (data.ingredients && data.ingredients.length > 0) {
@@ -4261,7 +4261,17 @@ function multiplierToPct(mult) {
   return (lo + hi) / 2;
 }
 
-function getPortionLabel(pct) {
+function getPortionLabel(pct, isPackaged) {
+  if (isPackaged) {
+    const mult = pctToMultiplier(pct);
+    if (mult < 0.3) return '¼ serving';
+    if (mult < 0.6) return '½ serving';
+    if (mult < 0.85) return '¾ serving';
+    if (mult < 1.15) return '1 serving';
+    if (mult < 1.65) return '1½ servings';
+    if (mult < 2.15) return '2 servings';
+    return '2½ servings';
+  }
   if (pct < 0.06) return 'a trace';
   if (pct < 0.14) return 'a taste';
   if (pct < 0.22) return 'a pinch';
@@ -4310,7 +4320,7 @@ function renderIngredientEditor(thumbSrc) {
       <div class="scan-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
       <div class="scan-identified-label">Identified</div>
       <div class="scan-meal-name">${scanMealMeta.name}</div>
-      <div style="font-size:10px;color:var(--ink-3);letter-spacing:.08em;margin-top:4px;margin-bottom:4px;">Adjust ingredients below</div>
+      <div style="font-size:10px;color:var(--ink-3);letter-spacing:.08em;margin-top:4px;margin-bottom:4px;">${scanMealMeta.packaged ? 'Adjust serving size below' : 'Adjust ingredients below'}</div>
     </div>
 
     <div class="ing-editor">
@@ -4323,7 +4333,7 @@ function renderIngredientEditor(thumbSrc) {
 
       <div class="ing-list" id="ingList"></div>
 
-      <div class="ing-add-row">
+      <div class="ing-add-row" ${scanMealMeta.packaged ? 'style="display:none"' : ''}>
         <input class="ing-add-input" id="ingAddInput" type="text" placeholder="Add missing ingredient..." />
         <button class="ing-add-btn" onclick="addIngredientManual()">ADD</button>
       </div>
@@ -4345,7 +4355,7 @@ function renderIngredientEditor(thumbSrc) {
       health_note: scanMealMeta.health_note,
       tags: scanMealMeta.tags,
       category: scanMealMeta.category,
-      ingredients: scanIngredients.map(ing => ({ name: ing.name, portion: getPortionLabel(ing.portionPct ?? 0.5), emoji: ing.emoji })),
+      ingredients: scanIngredients.map(ing => ({ name: ing.name, portion: getPortionLabel(ing.portionPct ?? 0.5, scanMealMeta.packaged), emoji: ing.emoji })),
     };
     addScannedMeal(finalMeal);
   });
@@ -4362,14 +4372,14 @@ function renderIngredientRows() {
     const prot = Math.round(ing._baseProt * m);
     const carbs = Math.round(ing._baseCarbs * m);
     const fat = Math.round(ing._baseFat * m);
-    const portionLabel = getPortionLabel(pct);
+    const portionLabel = getPortionLabel(pct, scanMealMeta.packaged);
     const isDefault = Math.abs(pct - 0.5) < 0.04;
 
     return `<div class="ing-row" id="ingRow${idx}" data-idx="${idx}">
       <div class="ing-header">
         <div class="ing-emoji">${ing.emoji}</div>
         <div class="ing-name">${ing.name}</div>
-        <div class="ing-actions">
+        <div class="ing-actions" ${scanMealMeta.packaged ? 'style="display:none"' : ''}>
           <button class="ing-action-btn replace" onclick="showReplacePanel(${idx})">Replace</button>
           <button class="ing-action-btn remove" onclick="removeIngredient(${idx})">✕</button>
         </div>
@@ -4415,7 +4425,7 @@ function renderIngredientRows() {
       fill.style.width = (pct * 100) + '%';
 
       // Update label with relatable term
-      label.textContent = getPortionLabel(pct);
+      label.textContent = getPortionLabel(pct, scanMealMeta.packaged);
       label.classList.toggle('active', Math.abs(pct - 0.5) >= 0.04);
 
       // Update per-ingredient macros continuously
