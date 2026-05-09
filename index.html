@@ -2627,7 +2627,7 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
 <div class="coach-overlay" id="coachOverlay">
   <div class="coach-header">
     <div class="coach-title"><div class="pulse-dot"></div> Health Coach</div>
-    <button class="coach-close" id="coachClose">&times;</button>
+    <button class="coach-close" id="coachClose" style="display:none">&times;</button>
   </div>
   <div class="coach-messages" id="coachMessages">
     <div class="msg ai" id="coachIntroMsg"><span class="msg-sender">FUEL AI</span>Hey — I'm your health coach. Ask me anything about nutrition, meal ideas, or your daily targets.</div>
@@ -2672,7 +2672,7 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
   <div class="cart-panel">
     <div class="cart-panel-header">
       <div class="cart-panel-title">CART</div>
-      <button class="cart-panel-close" id="cartClose">&times;</button>
+      <button class="cart-panel-close" id="cartClose" style="display:none">&times;</button>
     </div>
     <div class="cart-panel-body" id="cartPanelBody"></div>
   </div>
@@ -2682,7 +2682,7 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
 <div class="weekly-overlay" id="weeklyOverlay">
   <div class="weekly-header">
     <div class="weekly-title">THIS WEEK</div>
-    <button class="weekly-close" onclick="document.getElementById('weeklyOverlay').classList.remove('open')">&times;</button>
+    <button class="weekly-close" onclick="document.getElementById('weeklyOverlay').classList.remove('open')" style="display:none">&times;</button>
   </div>
   <div class="weekly-body" id="weeklyBody"></div>
 </div>
@@ -2691,7 +2691,7 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
 <div class="profile-overlay" id="profileOverlay">
   <div class="profile-header">
     <div class="profile-title">PROFILE</div>
-    <button class="profile-close" onclick="document.getElementById('profileOverlay').classList.remove('open')">&times;</button>
+    <button class="profile-close" onclick="document.getElementById('profileOverlay').classList.remove('open')" style="display:none">&times;</button>
   </div>
   <div class="profile-body" id="profileBody"></div>
 </div>
@@ -2700,7 +2700,7 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
 <div class="search-overlay" id="pantryPageOverlay">
   <div class="weekly-header">
     <div class="weekly-title" id="pantryPageTitle">PANTRY</div>
-    <button class="weekly-close" onclick="closePantryPage()">&times;</button>
+    <button class="weekly-close" onclick="closePantryPage()" style="display:none">&times;</button>
   </div>
   <div class="weekly-body" id="pantryPageBody" style="padding:12px 20px;"></div>
 </div>
