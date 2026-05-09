@@ -2922,6 +2922,9 @@ async function pullFromCloud() {
     if (pantryRow?.items) {
       localStorage.setItem(getPantryKey(), JSON.stringify(pantryRow.items));
     }
+
+    // Rebuild week XP from synced daily logs
+    rebuildWeekXp();
   } catch (e) { console.warn('[FUEL sync] pull failed:', e); }
 }
 
@@ -3023,11 +3026,11 @@ function saveWeekXp(data) {
   localStorage.setItem('fuel_xp', JSON.stringify(data));
 }
 
-function computeDailyXp(totals, mealCount, water, streak) {
+function computeDailyXp(totals, mealCount, water, streak, meals) {
   let xp = 0;
 
   // Per-meal bonuses
-  const meals = state.meals || [];
+  meals = meals || state.meals || [];
   for (const m of meals) {
     xp += 50; // logged a meal
     const p = m.protein || 0;
@@ -3119,6 +3122,34 @@ function computeTitle() {
   const modifier = computeModifier(totals, mealCount, state.water);
 
   return `${modifier} ${rank}`.toUpperCase();
+}
+
+function rebuildWeekXp() {
+  // Recompute XP for every day this week from stored daily logs
+  const weekData = { week: weekStartKey(), days: {} };
+  const days = loadAllDays();
+  const wkStart = new Date();
+  wkStart.setDate(wkStart.getDate() - wkStart.getDay());
+  wkStart.setHours(0,0,0,0);
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(wkStart);
+    d.setDate(d.getDate() + i);
+    if (d > new Date()) break;
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const dayData = days[key];
+    if (!dayData || !dayData.meals || !dayData.meals.length) continue;
+
+    const meals = dayData.meals;
+    const totals = meals.reduce((a,m) => ({
+      calories: a.calories+(m.calories||0), protein: a.protein+(m.protein||0),
+      carbs: a.carbs+(m.carbs||0), fat: a.fat+(m.fat||0), fiber: a.fiber+(m.fiber||0)
+    }), {calories:0,protein:0,carbs:0,fat:0,fiber:0});
+
+    const xp = computeDailyXp(totals, meals.length, dayData.water || 0, 0, meals);
+    weekData.days[key] = xp;
+  }
+  saveWeekXp(weekData);
 }
 
 function renderTitle() {
