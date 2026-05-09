@@ -2679,7 +2679,7 @@ body.light .search-overlay { background: rgba(240,235,225,.97); }
 <!-- PANTRY PAGE -->
 <div class="search-overlay" id="pantryPageOverlay">
   <div class="weekly-header">
-    <div class="weekly-title">PANTRY</div>
+    <div class="weekly-title" id="pantryPageTitle">PANTRY</div>
     <button class="weekly-close" onclick="closePantryPage()">&times;</button>
   </div>
   <div class="weekly-body" id="pantryPageBody" style="padding:12px 20px;"></div>
@@ -6454,26 +6454,18 @@ function renderPantryPage() {
     </div>`;
   }
 
-  // Shared pantry status or share button
-  if (_cachedShareStatus.shared) {
+  // Set pantry page title — personalized if shared
+  const titleEl = document.getElementById('pantryPageTitle');
+  if (_cachedShareStatus.shared && titleEl) {
     const memberFirstNames = _cachedShareStatus.members
       .map(m => {
         if (!m.user_profiles) return '?';
         const name = m.user_profiles.display_name || m.user_profiles.email.split('@')[0];
-        return name.split(' ')[0]; // first name only
+        return name.split(' ')[0];
       });
-    const pantryLabel = memberFirstNames.join(' & ') + '\u2019s Pantry';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--panel);border:1px solid var(--rule);margin-bottom:16px;">
-      <svg viewBox="0 0 24 24" width="14" height="14" stroke="var(--gold)" fill="none" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <div style="flex:1;">
-        <div style="font-size:9px;font-weight:500;letter-spacing:.2em;color:var(--gold);">${pantryLabel.toUpperCase()}</div>
-      </div>
-    </div>`;
-  } else {
-    html += `<button class="profile-action" style="margin:0 0 16px;padding:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="openShareDialog()">
-      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="1.5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-      SHARE PANTRY
-    </button>`;
+    titleEl.textContent = memberFirstNames.join(' & ') + '\u2019s Pantry';
+  } else if (titleEl) {
+    titleEl.textContent = 'PANTRY';
   }
 
   // Add manually
