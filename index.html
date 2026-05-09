@@ -899,11 +899,11 @@ body {
 .suggestions-track::-webkit-scrollbar { display: none; }
 .suggestions-track:active { cursor: grabbing; }
 .suggestion-card {
-  flex: 0 0 260px; scroll-snap-align: start;
-  background: var(--panel); border: 1px solid var(--rule); padding: 22px 20px;
-  display: flex; flex-direction: column; gap: 8px;
+  flex: 0 0 312px; scroll-snap-align: start;
+  background: var(--panel); border: 1px solid var(--rule); padding: 26px 24px;
+  display: flex; flex-direction: column; gap: 10px;
   transition: box-shadow .3s ease; user-select: none; -webkit-user-select: none;
-  position: relative; min-height: 190px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  position: relative; min-height: 228px; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .suggestion-card::after {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
@@ -6456,16 +6456,18 @@ function renderPantryPage() {
 
   // Shared pantry status or share button
   if (_cachedShareStatus.shared) {
-    const memberNames = _cachedShareStatus.members
-      .map(m => m.user_profiles ? (m.user_profiles.display_name || m.user_profiles.email.split('@')[0]) : '?')
-      .join(', ');
+    const memberFirstNames = _cachedShareStatus.members
+      .map(m => {
+        if (!m.user_profiles) return '?';
+        const name = m.user_profiles.display_name || m.user_profiles.email.split('@')[0];
+        return name.split(' ')[0]; // first name only
+      });
+    const pantryLabel = memberFirstNames.join(' & ') + '\u2019s Pantry';
     html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--panel);border:1px solid var(--rule);margin-bottom:16px;">
       <svg viewBox="0 0 24 24" width="14" height="14" stroke="var(--gold)" fill="none" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <div style="flex:1;">
-        <div style="font-size:9px;font-weight:500;letter-spacing:.2em;color:var(--gold);">SHARED PANTRY</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${memberNames}</div>
+        <div style="font-size:9px;font-weight:500;letter-spacing:.2em;color:var(--gold);">${pantryLabel.toUpperCase()}</div>
       </div>
-      <button class="profile-action" style="margin:0;padding:6px 12px;font-size:9px;" onclick="openShareDialog()">MANAGE</button>
     </div>`;
   } else {
     html += `<button class="profile-action" style="margin:0 0 16px;padding:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="openShareDialog()">
